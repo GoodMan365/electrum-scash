@@ -1,8 +1,7 @@
 include LICENCE RELEASE-NOTES AUTHORS
 include README.md
-include electrum.desktop
-include *.py
-include run_electrum
+include electrum-scash.desktop
+include run_electrum-scash
 include org.electrum.electrum.metainfo.xml
 recursive-include packages *.py
 recursive-include packages cacert.pem
