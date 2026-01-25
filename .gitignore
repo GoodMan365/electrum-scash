@@ -6,6 +6,7 @@ build/
 dist/
 *.egg/
 Electrum.egg-info/
+Electrum-Scash.egg-info/
 .devlocaltmp/
 *_trial_temp
 packages
@@ -21,6 +22,10 @@ electrum_data
 .DS_Store
 contrib/trigger_website
 contrib/trigger_binaries
+
+# Logs and temporary files
+*.log
+*.backup
 
 # tests/tox
 .tox/

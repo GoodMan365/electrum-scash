@@ -11,7 +11,7 @@ from .bip21 import create_bip21_uri
 from .lnutil import hex_to_bytes
 from .lnaddr import lndecode, LnAddr
 from . import constants
-from .bitcoin import COIN, TOTAL_COIN_SUPPLY_LIMIT_IN_BTC
+from .bitcoin import COIN, TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH
 from .bitcoin import address_to_script
 from .transaction import PartialTxOutput
 from .crypto import sha256d
@@ -200,7 +200,7 @@ class BaseInvoice(StoredObject):
         if value is None:
             return
         if isinstance(value, int):
-            if not (0 <= value <= TOTAL_COIN_SUPPLY_LIMIT_IN_BTC * COIN * 1000):
+            if not (0 <= value <= TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH * COIN * 1000):
                 raise InvoiceError(f"amount is out-of-bounds: {value!r} msat")
         elif isinstance(value, str):
             if value != '!':
@@ -246,10 +246,7 @@ class BaseInvoice(StoredObject):
         )
 
     def get_id(self) -> str:
-        if self.is_lightning():
-            return self.rhash
-        else:  # on-chain
-            return get_id_from_onchain_outputs(outputs=self.get_outputs(), timestamp=self.time)
+        return get_id_from_onchain_outputs(outputs=self.get_outputs(), timestamp=self.time)
 
     def as_dict(self, status):
         d = {
@@ -271,7 +268,7 @@ class BaseInvoice(StoredObject):
 @stored_in('invoices')
 @attr.s
 class Invoice(BaseInvoice):
-    lightning_invoice = attr.ib(type=str, kw_only=True)  # type: Optional[str]
+    lightning_invoice = attr.ib(type=Optional[str], default=None, kw_only=True) 
     __lnaddr = None
     _broadcasting_status = None # can be None or PR_BROADCASTING or PR_BROADCAST
 
@@ -365,4 +362,6 @@ class Request(BaseInvoice):
 
 def get_id_from_onchain_outputs(outputs: Sequence[PartialTxOutput], *, timestamp: int) -> str:
     outputs_str = "\n".join(f"{txout.scriptpubkey.hex()}, {txout.value}" for txout in outputs)
-    return sha256d(outputs_str + "%d" % timestamp).hex()[0:10]
+    result = sha256d(outputs_str + "%d" % timestamp).hex()[0:10]
+    return result
+    

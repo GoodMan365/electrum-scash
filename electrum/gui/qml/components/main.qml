@@ -9,7 +9,7 @@ import QtQuick.Window
 import QtQml
 import QtMultimedia
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -79,7 +79,7 @@ ApplicationWindow
 
         MenuItem {
             icon.color: action.enabled ? 'transparent' : Material.iconDisabledColor
-            icon.source: '../../icons/electrum.png'
+            icon.source: '../../icons/electrum-scash-128.png'
             action: Action {
                 text: qsTr('About');
                 onTriggered: menu.openPage(Qt.resolvedUrl('About.qml'))
@@ -233,23 +233,24 @@ ApplicationWindow
                             }
                         }
 
-                        LightningNetworkStatusIndicator {
-                            id: lnnsi
-                        }
+                        //LightningNetworkStatusIndicator {
+                        //    id: lnnsi
+						//	visible: Daemon.currentWallet && //Daemon.currentWallet.canHaveLightning
+                        //}
                         OnchainNetworkStatusIndicator { }
                     }
                 }
             }
 
-            // hack to force relayout of toolbar
-            // since qt6 LightningNetworkStatusIndicator.visible doesn't trigger relayout(?)
-            Item {
-                Layout.preferredHeight: 1
-                Layout.topMargin: -1
-                Layout.preferredWidth: lnnsi.visible
-                    ? 1
-                    : 2
-            }
+            //// hack to force relayout of toolbar
+            //// since qt6 LightningNetworkStatusIndicator.visible doesn't trigger //relayout(?)
+            //Item {
+            //    Layout.preferredHeight: 1
+            //    Layout.topMargin: -1
+            //    Layout.preferredWidth: lnnsi.visible
+            //        ? 1
+            //        : 2
+            //}
         }
     }
 
@@ -469,6 +470,8 @@ ApplicationWindow
     property alias channelOpenProgressDialog: _channelOpenProgressDialog
     ChannelOpenProgressDialog {
         id: _channelOpenProgressDialog
+		visible: false  // Add this to hide it
+		enabled: false  // Add this to disable it
     }
 
     property alias signVerifyMessageDialog: _signVerifyMessageDialog
@@ -615,7 +618,7 @@ ApplicationWindow
             stack.pop()
         } else {
             var dialog = app.messageDialog.createObject(app, {
-                title: qsTr('Close Electrum?'),
+                title: qsTr('Close Electrum-Scash?'),
                 yesno: true
             })
             dialog.accepted.connect(function() {
@@ -817,8 +820,11 @@ ApplicationWindow
     }
 
     function startSwap() {
-        var swapdialog = swapDialog.createObject(app)
-        swapdialog.open()
+		if (!app.canHaveLightning) return; 
+		if (Daemon.currentWallet.canHaveLightning) {
+			var swapdialog = swapDialog.createObject(app)
+			swapdialog.open()
+		}
     }
 
     property var _lastActive: 0 // record time of last activity

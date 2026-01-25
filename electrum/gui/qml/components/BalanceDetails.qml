@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -41,7 +41,7 @@ Pane {
                         visible: Daemon.currentWallet.synchronizing || !Network.isConnected
                         text: Daemon.currentWallet.synchronizing
                                   ? qsTr('Your wallet is not synchronized. The displayed balance may be inaccurate.')
-                                  : qsTr('Your wallet is not connected to an Electrum server. The displayed balance may be outdated.')
+                                  : qsTr('Your wallet is not connected to an Electrum-Scash server. The displayed balance may be outdated.')
                         iconStyle: InfoTextArea.IconStyle.Warn
                     }
 
@@ -213,7 +213,8 @@ Pane {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
                 text: qsTr('Lightning swap');
-                visible: Daemon.currentWallet.isLightning
+				visible: Daemon.currentWallet.canHaveLightning 
+                //visible: Daemon.currentWallet.isLightning
                 enabled: Daemon.currentWallet.lightningCanSend.satsInt > 0 || Daemon.currentWallet.lightningCanReceive.satInt > 0
                 icon.source: Qt.resolvedUrl('../../icons/update.png')
                 onClicked: app.startSwap()

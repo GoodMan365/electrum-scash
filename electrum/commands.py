@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2011 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -44,8 +45,6 @@ import re
 import electrum_ecc as ecc
 
 from . import util
-from .lnmsg import OnionWireSerializer
-from .lnworker import LN_P2P_NETWORK_TIMEOUT
 from .logging import Logger
 from .onion_message import create_blinded_path, send_onion_message_to
 from .submarine_swaps import NostrTransport
@@ -70,8 +69,7 @@ from .wallet import (
 )
 from .address_synchronizer import TX_HEIGHT_LOCAL
 from .mnemonic import Mnemonic
-from .lnutil import (channel_id_from_funding_tx, LnFeatures, SENT, MIN_FINAL_CLTV_DELTA_ACCEPTED,
-                     PaymentFeeBudget, NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE)
+from .lnutil import (channel_id_from_funding_tx, LnFeatures, SENT, RECEIVED, MIN_FINAL_CLTV_DELTA_ACCEPTED, PaymentFeeBudget, NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE)
 from .plugin import run_hook, DeviceMgr, Plugins
 from .version import ELECTRUM_VERSION
 from .simple_config import SimpleConfig
@@ -1121,13 +1119,14 @@ class Commands(Logger):
         return json_normalize(out)
 
     @command('wl')
-    async def lightning_history(self, wallet: Abstract_Wallet = None):
-        """ lightning history. """
-        lightning_history = wallet.lnworker.get_lightning_history() if wallet.lnworker else {}
-        sorted_hist= sorted(lightning_history.values(), key=lambda x: x.timestamp)
-        return json_normalize([x.to_dict() for x in sorted_hist])
-
-    @command('w')
+# LIGHTNING DISABLED FOR SCASH
+#     async def lightning_history(self, wallet: Abstract_Wallet = None):
+#         """ lightning history. """
+#         lightning_history = wallet.lnworker.get_lightning_history() if wallet.lnworker else {}
+#         sorted_hist= sorted(lightning_history.values(), key=lambda x: x.timestamp)
+#         return json_normalize([x.to_dict() for x in sorted_hist])
+# 
+#     @command('w')
     async def setlabel(self, key, label, wallet: Abstract_Wallet = None):
         """
         Assign a label to an item. Item may be a bitcoin address or a
@@ -1738,31 +1737,32 @@ class Commands(Logger):
             'channels': [c.funding_outpoint.to_str() for c in p.channels.values()],
         } for p in lnworker.peers.values()]
 
-    @command('wpnl')
-    async def open_channel(self, connection_string, amount, push_amount=0, public=False, zeroconf=False, password=None, wallet: Abstract_Wallet = None):
-        """
-        Open a lightning channel with a peer
-
-        arg:str:connection_string:Lightning network node ID or network address
-        arg:decimal_or_max:amount:funding amount (in BTC)
-        arg:decimal:push_amount:Push initial amount (in BTC)
-        arg:bool:public:The channel will be announced
-        arg:bool:zeroconf:request zeroconf channel
-        """
-        if not wallet.can_have_lightning():
-            raise UserFacingException("This wallet cannot create new channels")
-        funding_sat = satoshis(amount)
-        push_sat = satoshis(push_amount)
-        peer = await wallet.lnworker.add_peer(connection_string)
-        chan, funding_tx = await wallet.lnworker.open_channel_with_peer(
-            peer, funding_sat,
-            push_sat=push_sat,
-            public=public,
-            zeroconf=zeroconf,
-            password=password)
-        return chan.funding_outpoint.to_str()
-
-    @command('')
+#     @command('wpnl')
+# LIGHTNING DISABLED FOR SCASH
+#     async def open_channel(self, connection_string, amount, push_amount=0, public=False, zeroconf=False, password=None, wallet: Abstract_Wallet = None):
+#         """
+#         Open a lightning channel with a peer
+# 
+#         arg:str:connection_string:Lightning network node ID or network address
+#         arg:decimal_or_max:amount:funding amount (in BTC)
+#         arg:decimal:push_amount:Push initial amount (in BTC)
+#         arg:bool:public:The channel will be announced
+#         arg:bool:zeroconf:request zeroconf channel
+#         """
+#         if not wallet.can_have_lightning():
+#             raise UserFacingException("This wallet cannot create new channels")
+#         funding_sat = satoshis(amount)
+#         push_sat = satoshis(push_amount)
+#         peer = await wallet.lnworker.add_peer(connection_string)
+#         chan, funding_tx = await wallet.lnworker.open_channel_with_peer(
+#             peer, funding_sat,
+#             push_sat=push_sat,
+#             public=public,
+#             zeroconf=zeroconf,
+#             password=password)
+#         return chan.funding_outpoint.to_str()
+# 
+#     @command('')
     async def decode_invoice(self, invoice: str):
         """
         Decode a lightning invoice
@@ -1773,61 +1773,62 @@ class Commands(Logger):
         return invoice.to_debug_json()
 
     @command('wnpl')
-    async def lnpay(
-        self,
-        invoice: str,
-        timeout: int = 120,
-        max_cltv: Optional[int] = None,
-        max_fee_msat: Optional[int] = None,
-        password=None,
-        wallet: Abstract_Wallet = None
-    ):
-        """
-        Pay a lightning invoice
-        Note: it is *not* safe to try paying the same invoice multiple times with a timeout.
-              It is only safe to retry paying the same invoice if there are no more pending HTLCs
-              with the same payment_hash.  # FIXME should there even be a default timeout? just block forever.
-
-        arg:str:invoice:Lightning invoice (bolt 11)
-        arg:int:timeout:Timeout in seconds (default=120)
-        arg:int:max_cltv:Maximum total time lock for the route (default=4032+invoice_final_cltv_delta)
-        arg:int:max_fee_msat:Maximum absolute fee budget for the payment (if unset, the default is a percentage fee based on config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
-        """
-        # note: The "timeout" param works via black magic.
-        #       The CLI-parser stores it in the config, and the argname matches config.cv.CLI_TIMEOUT.key().
-        #       - it works when calling the CLI and there is also a daemon (online command)
-        #       - FIXME it does NOT work when calling an offline command (-o)
-        #       - FIXME it does NOT work when calling RPC directly (e.g. curl)
-        lnworker = wallet.lnworker
-        lnaddr = lnworker._check_bolt11_invoice(invoice)  # also checks if amount is given
-        payment_hash = lnaddr.paymenthash
-        invoice_obj = Invoice.from_bech32(invoice)
-        assert not max_fee_msat or max_fee_msat < max(invoice_obj.amount_msat // 2, 1_000_000), \
-                                    f"{max_fee_msat=} > max(invoice amount msat / 2, 1_000_000)"
-        wallet.save_invoice(invoice_obj)
-        if max_cltv is not None:
-            # The cltv budget excludes the final cltv delta which is why it is deducted here
-            # so the whole used cltv is <= max_cltv
-            assert max_cltv <= NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE, \
-                    f"{max_cltv=} > {NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE=}"
-            max_cltv_remaining = max_cltv - lnaddr.get_min_final_cltv_delta()
-            assert max_cltv_remaining > 0, f"{max_cltv=} - {lnaddr.get_min_final_cltv_delta()=} < 1"
-            max_cltv = max_cltv_remaining
-        budget = PaymentFeeBudget.from_invoice_amount(
-            config=wallet.config,
-            invoice_amount_msat=invoice_obj.amount_msat,
-            max_cltv_delta=max_cltv,
-            max_fee_msat=max_fee_msat,
-        )
-        success, log = await lnworker.pay_invoice(invoice_obj, budget=budget)
-        return {
-            'payment_hash': payment_hash.hex(),
-            'success': success,
-            'preimage': lnworker.get_preimage(payment_hash).hex() if success else None,
-            'log': [x.formatted_tuple() for x in log]
-        }
-
-    @command('wl')
+# LIGHTNING DISABLED FOR SCASH
+#     async def lnpay(
+#         self,
+#         invoice: str,
+#         timeout: int = 120,
+#         max_cltv: Optional[int] = None,
+#         max_fee_msat: Optional[int] = None,
+#         password=None,
+#         wallet: Abstract_Wallet = None
+#     ):
+#         """
+#         Pay a lightning invoice
+#         Note: it is *not* safe to try paying the same invoice multiple times with a timeout.
+#               It is only safe to retry paying the same invoice if there are no more pending HTLCs
+#               with the same payment_hash.  # FIXME should there even be a default timeout? just block forever.
+# 
+#         arg:str:invoice:Lightning invoice (bolt 11)
+#         arg:int:timeout:Timeout in seconds (default=120)
+#         arg:int:max_cltv:Maximum total time lock for the route (default=4032+invoice_final_cltv_delta)
+#         arg:int:max_fee_msat:Maximum absolute fee budget for the payment (if unset, the default is a percentage fee based on config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
+#         """
+#         # note: The "timeout" param works via black magic.
+#         #       The CLI-parser stores it in the config, and the argname matches config.cv.CLI_TIMEOUT.key().
+#         #       - it works when calling the CLI and there is also a daemon (online command)
+#         #       - FIXME it does NOT work when calling an offline command (-o)
+#         #       - FIXME it does NOT work when calling RPC directly (e.g. curl)
+#         lnworker = wallet.lnworker
+#         lnaddr = lnworker._check_bolt11_invoice(invoice)  # also checks if amount is given
+#         payment_hash = lnaddr.paymenthash
+#         invoice_obj = Invoice.from_bech32(invoice)
+#         assert not max_fee_msat or max_fee_msat < max(invoice_obj.amount_msat // 2, 1_000_000), \
+#                                     f"{max_fee_msat=} > max(invoice amount msat / 2, 1_000_000)"
+#         wallet.save_invoice(invoice_obj)
+#         if max_cltv is not None:
+#             # The cltv budget excludes the final cltv delta which is why it is deducted here
+#             # so the whole used cltv is <= max_cltv
+#             assert max_cltv <= NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE, \
+#                     f"{max_cltv=} > {NBLOCK_CLTV_DELTA_TOO_FAR_INTO_FUTURE=}"
+#             max_cltv_remaining = max_cltv - lnaddr.get_min_final_cltv_delta()
+#             assert max_cltv_remaining > 0, f"{max_cltv=} - {lnaddr.get_min_final_cltv_delta()=} < 1"
+#             max_cltv = max_cltv_remaining
+#         budget = PaymentFeeBudget.from_invoice_amount(
+#             config=wallet.config,
+#             invoice_amount_msat=invoice_obj.amount_msat,
+#             max_cltv_delta=max_cltv,
+#             max_fee_msat=max_fee_msat,
+#         )
+#         success, log = await lnworker.pay_invoice(invoice_obj, budget=budget)
+#         return {
+#             'payment_hash': payment_hash.hex(),
+#             'success': success,
+#             'preimage': lnworker.get_preimage(payment_hash).hex() if success else None,
+#             'log': [x.formatted_tuple() for x in log]
+#         }
+# 
+#     @command('wl')
     async def nodeid(self, wallet: Abstract_Wallet = None):
         """Return the Lightning Node ID of a wallet"""
         listen_addr = self.config.LIGHTNING_LISTEN
@@ -1837,7 +1838,6 @@ class Commands(Logger):
     async def list_channels(self, wallet: Abstract_Wallet = None):
         """Return the list of Lightning channels in a wallet"""
         # FIXME: we need to be online to display capacity of backups
-        from .lnutil import LOCAL, REMOTE, format_short_channel_id
         channels = list(wallet.lnworker.channels.items())
         backups = list(wallet.lnworker.channel_backups.items())
         return [
@@ -1891,22 +1891,23 @@ class Commands(Logger):
             self.network.path_finder.clear_blacklist()
 
     @command('wnpl')
-    async def close_channel(self, channel_point, force=False, password=None, wallet: Abstract_Wallet = None):
-        """
-        Close a lightning channel.
-        Returns txid of closing tx.
-
-        arg:str:channel_point:channel point
-        arg:bool:force:Force closes (broadcast local commitment transaction)
-        """
-        txid, index = channel_point.split(':')
-        chan_id, _ = channel_id_from_funding_tx(txid, int(index))
-        if chan_id not in wallet.lnworker.channels:
-            raise UserFacingException(f'Unknown channel {channel_point}')
-        coro = wallet.lnworker.force_close_channel(chan_id) if force else wallet.lnworker.close_channel(chan_id)
-        return await coro
-
-    @command('wnpl')
+# LIGHTNING DISABLED FOR SCASH
+#     async def close_channel(self, channel_point, force=False, password=None, wallet: Abstract_Wallet = None):
+#         """
+#         Close a lightning channel.
+#         Returns txid of closing tx.
+# 
+#         arg:str:channel_point:channel point
+#         arg:bool:force:Force closes (broadcast local commitment transaction)
+#         """
+#         txid, index = channel_point.split(':')
+#         chan_id, _ = channel_id_from_funding_tx(txid, int(index))
+#         if chan_id not in wallet.lnworker.channels:
+#             raise UserFacingException(f'Unknown channel {channel_point}')
+#         coro = wallet.lnworker.force_close_channel(chan_id) if force else wallet.lnworker.close_channel(chan_id)
+#         return await coro
+# 
+#     @command('wnpl')
     async def request_force_close(self, channel_point, connection_string=None, password=None, wallet: Abstract_Wallet = None):
         """
         Requests the remote to force close a channel.
@@ -1982,7 +1983,6 @@ class Commands(Logger):
         arg:decimal:amount:Amount (in BTC)
 
         """
-        from .lnutil import ShortChannelID
         from_scid = ShortChannelID.from_str(from_scid)
         dest_scid = ShortChannelID.from_str(dest_scid)
         from_channel = wallet.lnworker.get_channel_by_short_id(from_scid)

@@ -16,7 +16,7 @@ from electrum.storage import WalletStorage, StorageEncryptionVersion
 from electrum.wallet_db import WalletDB
 from electrum.bip32 import normalize_bip32_derivation, xpub_type
 from electrum import keystore, mnemonic, bitcoin
-from electrum.mnemonic import is_any_2fa_seed_type, can_seed_have_passphrase
+from electrum.mnemonic import can_seed_have_passphrase
 from electrum.util import multisig_type
 
 if TYPE_CHECKING:
@@ -178,8 +178,7 @@ class AbstractWizard:
             "type", "pw_hash_version", "derivation", "root_fingerprint",
             # multisig:
             "multisig_participants", "multisig_signatures", "multisig_current_cosigner", "cosigner_keystore_type",
-            # trustedcoin:
-            "trustedcoin_keepordisable", "trustedcoin_go_online",
+            
         ]
 
         def sanitize(_dict):
@@ -342,9 +341,8 @@ class KeystoreWizard(AbstractWizard):
             raise Exception(f'unknown seed variant {seed_variant}')
 
         # check if seed matches wallet type
-        if wallet_type == '2fa' and not is_any_2fa_seed_type(seed_type):
-            seed_valid = False
-        elif wallet_type == 'standard' and seed_type not in ['old', 'standard', 'segwit', 'bip39', 'slip39']:
+
+        if wallet_type == 'standard' and seed_type not in ['old', 'standard', 'segwit', 'bip39', 'slip39']:
             seed_valid = False
         elif wallet_type == 'multisig' and seed_type not in ['standard', 'segwit', 'bip39', 'slip39']:
             seed_valid = False
@@ -495,8 +493,7 @@ class NewWalletWizard(KeystoreWizard):
         }
         self._daemon = daemon
         self.plugins = plugins
-        # todo: load only if needed, like hw plugins
-        self.plugins.load_plugin_by_name('trustedcoin')
+        
 
     def start(self, *, start_viewstate: WizardViewState = None) -> WizardViewState:
         self.reset()
@@ -515,7 +512,6 @@ class NewWalletWizard(KeystoreWizard):
         t = wizard_data['wallet_type']
         return {
             'standard': 'keystore_type',
-            '2fa': 'trustedcoin_start',
             'multisig': 'multisig',
             'imported': 'imported'
         }.get(t)
@@ -681,7 +677,7 @@ class NewWalletWizard(KeystoreWizard):
         return key_valid, validation_message
 
     def create_storage(self, path: str, data: dict):
-        assert data['wallet_type'] in ['standard', '2fa', 'imported', 'multisig']
+        assert data['wallet_type'] in ['standard', 'imported', 'multisig']
 
         if os.path.exists(path):
             raise Exception('file already exists at path')
@@ -725,9 +721,7 @@ class NewWalletWizard(KeystoreWizard):
                 else:
                     script = data['script_type'] if data['script_type'] != 'p2pkh' else 'standard'
                 k = keystore.from_bip43_rootseed(root_seed, derivation=derivation, xtype=script)
-            elif is_any_2fa_seed_type(data['seed_type']):
-                self._logger.debug('creating keystore from 2fa seed')
-                k = keystore.from_xprv(data['x1']['xprv'])
+
             else:
                 raise Exception('unsupported/unknown seed_type %s' % data['seed_type'])
         elif data['keystore_type'] == 'masterkey':
@@ -778,18 +772,7 @@ class NewWalletWizard(KeystoreWizard):
 
         if data['wallet_type'] == 'standard':
             db.put('keystore', k.dump())
-        elif data['wallet_type'] == '2fa':
-            db.put('x1', k.dump())
-            if 'trustedcoin_keepordisable' in data and data['trustedcoin_keepordisable'] == 'disable':
-                k2 = keystore.from_xprv(data['x2']['xprv'])
-                if data['encrypt'] and k2.may_have_password():
-                    k2.update_password(None, data['password'])
-                db.put('x2', k2.dump())
-            else:
-                db.put('x2', data['x2'])
-            if 'x3' in data:
-                db.put('x3', data['x3'])
-            db.put('use_trustedcoin', True)
+
         elif data['wallet_type'] == 'multisig':
             if not isinstance(k, keystore.Xpub):
                 raise Exception(f'unexpected keystore(main) type={type(k)} in multisig. not bip32.')
@@ -810,8 +793,8 @@ class NewWalletWizard(KeystoreWizard):
                 db.put('keystore', k.dump())
             db.put('addresses', addresses)
 
-        if k and k.can_have_deterministic_lightning_xprv():
-            db.put('lightning_xprv', k.get_lightning_xprv(data['password']))
+        # if k and k.can_have_deterministic_lightning_xprv():
+            # db.put('lightning_xprv', k.get_lightning_xprv(data['password']))
 
         db.load_plugins()
         db.write()

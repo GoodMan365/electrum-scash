@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -65,7 +65,7 @@ ElDialog {
                     Layout.preferredHeight: constants.iconSizeSmall
                     source: swaphelper.isReverse
                         ? '../../icons/lightning.png'
-                        : '../../icons/bitcoin.png'
+                        : '../../icons/scash.png'
                 }
             }
 
@@ -96,7 +96,7 @@ ElDialog {
                     Layout.preferredWidth: constants.iconSizeSmall
                     Layout.preferredHeight: constants.iconSizeSmall
                     source: swaphelper.isReverse
-                        ? '../../icons/bitcoin.png'
+                        ? '../../icons/scash.png'
                         : '../../icons/lightning.png'
                 }
             }

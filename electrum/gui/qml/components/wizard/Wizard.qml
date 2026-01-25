@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "../controls"
 
@@ -17,7 +17,7 @@ ElDialog {
 
     title: (pages.currentItem.wizard_title ? pages.currentItem.wizard_title : wizardTitle) +
         (pages.currentItem.title ? ' - ' + pages.currentItem.title : '')
-    iconSource: '../../../icons/electrum.png'
+    iconSource: '../../../icons/electrum-scash-128.png'
 
     // android back button triggers close() on Popups. Disabling close here,
     // we handle that via Keys.onReleased event handler in the root layout.

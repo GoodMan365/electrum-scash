@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2012 thomasv@gitorious
 #
 # Permission is hereby granted, free of charge, to any person
@@ -152,8 +152,8 @@ class ElectrumGui(BaseElectrumGui, Logger):
         if hasattr(QtCore.Qt, "AA_ShareOpenGLContexts"):
             QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
         if hasattr(QGuiApplication, 'setDesktopFileName'):
-            QGuiApplication.setDesktopFileName('electrum')
-        QGuiApplication.setApplicationName("Electrum")
+            QGuiApplication.setDesktopFileName('electrum-scash')
+        QGuiApplication.setApplicationName("Electrum-Scash")
         self.gui_thread = threading.current_thread()
         self.windows = []  # type: List[ElectrumWindow]
         self.open_file_efilter = OpenFileEventFilter(self.windows)
@@ -164,7 +164,7 @@ class ElectrumGui(BaseElectrumGui, Logger):
             self.app.installEventFilter(self.screenshot_protection_efilter)
         # explicitly set 'AA_DontShowIconsInMenus' False so menu icons are shown on MacOS
         self.app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, on=False)
-        self.app.setWindowIcon(read_QIcon("electrum.png"))
+        self.app.setWindowIcon(read_QIcon("electrum-scash.png"))
         self.translator = ElectrumTranslator()
         self.app.installTranslator(self.translator)
         self._cleaned_up = False
@@ -183,7 +183,7 @@ class ElectrumGui(BaseElectrumGui, Logger):
 
     def _init_tray(self):
         self.tray = QSystemTrayIcon(self.tray_icon(), None)
-        self.tray.setToolTip('Electrum')
+        self.tray.setToolTip('Electrum-Scash')
         self.tray.activated.connect(self.tray_activated)
         self.build_tray_menu()
         self.tray.show()
@@ -306,6 +306,8 @@ class ElectrumGui(BaseElectrumGui, Logger):
         self.app.new_window_signal.emit(path, uri)
 
     def show_lightning_dialog(self):
+        if constants.net.NET_NAME == 'scash':
+            return
         if not self.daemon.network.has_channel_db():
             return
         if not self.lightning_dialog:
@@ -462,8 +464,6 @@ class ElectrumGui(BaseElectrumGui, Logger):
         if not d['wallet_exists']:
             self.logger.info('about to create wallet')
             wizard.create_storage()
-            if d['wallet_type'] == '2fa' and 'x3' not in d:
-                return
             wallet_file = wizard.path
         else:
             wallet_file = d['wallet_name']
@@ -476,33 +476,9 @@ class ElectrumGui(BaseElectrumGui, Logger):
         except WalletRequiresSplit as e:
             wizard.run_split(wallet_file, e._split_data)
             return
+
         except WalletUnfinished as e:
-            # wallet creation is not complete, 2fa online phase
-            db = e._wallet_db
-            action = db.get_action()
-            assert action[1] == 'accept_terms_of_use', 'only support for resuming trustedcoin split setup'
-            k1 = load_keystore(db, 'x1')
-            if password is not None:
-                xprv = k1.get_master_private_key(password)
-            else:
-                xprv = db.get('x1')['xprv']
-                if not is_xprv(xprv):
-                    xprv = k1
-            _wiz_data_updates = {
-                'wallet_name': wallet_file,
-                'xprv1': xprv,
-                'xpub1': db.get('x1')['xpub'],
-                'xpub2': db.get('x2')['xpub'],
-            }
-            data = {**d, **_wiz_data_updates}
-            wizard = QENewWalletWizard(self.config, self.app, self.plugins, self.daemon, path,
-                                       start_viewstate=WizardViewState('trustedcoin_tos', data, {}))
-            result = wizard.exec()
-            if result == QDialog.DialogCode.Rejected:
-                self.logger.info('wizard dialog cancelled by user')
-                return
-            db.put('x3', wizard.get_wizard_data()['x3'])
-            db.write()
+            raise Exception("Unfinished wallet creation not supported")  # ToDo
 
         wallet = Wallet(db, config=self.config)
         wallet.start_network(self.daemon.network)

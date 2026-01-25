@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "../controls"
 
@@ -13,7 +13,6 @@ WizardComponent {
 
     valid: false
 
-    property bool is2fa: false
     property int cosigner: 0
     property int participants: 0
     property string multisigMasterPubkey: wizard_data['multisig_master_pubkey']
@@ -62,7 +61,7 @@ WizardComponent {
             ].join(' ')
         }
         infotext.text = t[seed_variant_cb.currentValue]
-        infotext.visible = !cosigner && !is2fa && seed_variant_cb.currentValue != 'electrum'
+        infotext.visible = !cosigner && seed_variant_cb.currentValue != 'electrum'
     }
 
     function checkValid() {
@@ -163,13 +162,11 @@ WizardComponent {
 
             Label {
                 Layout.fillWidth: true
-                visible: !is2fa
                 text: qsTr('Seed Type')
             }
 
             ComboBox {
                 id: seed_variant_cb
-                visible: !is2fa
 
                 textRole: 'text'
                 valueRole: 'value'
@@ -232,9 +229,7 @@ WizardComponent {
     }
 
     Component.onCompleted: {
-        if (wizard_data['wallet_type'] == '2fa') {
-            is2fa = true
-        } else if (wizard_data['wallet_type'] == 'multisig') {
+        if (wizard_data['wallet_type'] == 'multisig') {
             participants = wizard_data['multisig_participants']
             if ('multisig_current_cosigner' in wizard_data)
                 cosigner = wizard_data['multisig_current_cosigner']

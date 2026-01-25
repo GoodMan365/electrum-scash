@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2015 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -113,7 +113,7 @@ class InvoiceList(MyTreeView):
             if item.is_lightning():
                 icon_name = 'lightning.png'
             else:
-                icon_name = 'bitcoin.png'
+                icon_name = 'scash.png'
                 if item.bip70:
                     icon_name = 'seal.png'
             status = self.wallet.get_invoice_status(item)

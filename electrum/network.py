@@ -1,5 +1,6 @@
 # Electrum - Lightweight Bitcoin Client
 # Copyright (c) 2011-2016 Thomas Voegtlin
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -415,6 +416,7 @@ class Network(Logger, NetworkRetryManager[ServerAddr]):
         from . import lnrouter
         from . import channel_db
         from . import lnworker
+        return
         if not self.config.LIGHTNING_USE_GOSSIP:
             return
         if self.lngossip is None:

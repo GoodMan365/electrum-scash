@@ -1,4 +1,6 @@
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2023 The Electrum developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 #

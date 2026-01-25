@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2025 The Electrum Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -118,8 +118,6 @@ class Plugin(PsbtNostrPlugin):
         for _wallet in self.cosigner_wallets.copy().keys():
             self.remove_cosigner_wallet(_wallet)
         if not isinstance(wallet, Multisig_Wallet):
-            return
-        if wallet.wallet_type == '2fa':
             return
         self.add_cosigner_wallet(wallet, QmlCosignerWallet(wallet, self))
 

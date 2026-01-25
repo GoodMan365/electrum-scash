@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2011 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -22,6 +23,7 @@
 # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import os
 import re
 import ssl
@@ -709,8 +711,8 @@ class Interface(Logger):
             except GracefulDisconnect as e:
                 self.logger.log(e.log_level, f"disconnecting due to {repr(e)}")
             except aiorpcx.jsonrpc.RPCError as e:
-                self.logger.warning(f"disconnecting due to {repr(e)}")
-                self.logger.debug(f"(disconnect) trace for {repr(e)}", exc_info=True)
+                self.logger.log(f"disconnecting due to {repr(e)}")
+                self.logger.log(f"(disconnect) trace for {repr(e)}", exc_info=True)
             finally:
                 self.got_disconnected.set()
                 # Make sure taskgroup gets cleaned-up. This explicit clean-up is needed here
@@ -835,13 +837,14 @@ class Interface(Logger):
     async def get_block_header(self, height: int, *, mode: ChainResolutionMode) -> dict:
         if not is_non_negative_integer(height):
             raise Exception(f"{repr(height)} is not a block height")
-        #self.logger.debug(f'get_block_header() {height} in {mode=}')
-        # use lower timeout as we usually have network.bhi_lock here
+        if raw_header := self._headers_cache.get(height):
+            return blockchain.deserialize_header(raw_header, height)
         timeout = self.network.get_network_timeout_seconds(NetworkTimeout.Urgent)
         if raw_header := self._headers_cache.get(height):
             return blockchain.deserialize_header(raw_header, height)
-        self.logger.info(f'requesting block header {height} in {mode=}')
+        self.logger.debug(f'  -interface-  requesting block header {height} in {mode=}')
         res = await self.session.send_request('blockchain.block.header', [height], timeout=timeout)
+
         return blockchain.deserialize_header(bytes.fromhex(res), height)
 
     async def get_block_headers(
@@ -852,21 +855,17 @@ class Interface(Logger):
         timeout=None,
         mode: Optional[ChainResolutionMode] = None,
     ) -> Sequence[bytes]:
-        """Request a number of consecutive block headers, starting at `start_height`.
-        `count` is the num of requested headers, BUT note the server might return fewer than this
-        (if range would extend beyond its tip).
-        note: the returned headers are not verified or parsed at all.
-        """
+
         if not is_non_negative_integer(start_height):
             raise Exception(f"{repr(start_height)} is not a block height")
         if not is_non_negative_integer(count) or not (0 < count <= MAX_NUM_HEADERS_PER_REQUEST):
             raise Exception(f"{repr(count)} not an int in range ]0, {MAX_NUM_HEADERS_PER_REQUEST}]")
-        self.logger.info(
-            f"requesting block headers: [{start_height}, {start_height+count-1}], {count=}"
+        self.logger.debug(
+            f" -interface- requesting block headers: [{start_height}, {start_height+count-1}], {count=}"
             + (f" (in {mode=})" if mode is not None else "")
         )
         res = await self.session.send_request('blockchain.block.headers', [start_height, count], timeout=timeout)
-        # check response
+
         assert_dict_contains_field(res, field_name='count')
         assert_dict_contains_field(res, field_name='max')
         assert_non_negative_integer(res['count'])
@@ -887,18 +886,16 @@ class Interface(Logger):
             if len(hex_headers_concat) != HEADER_SIZE * 2 * res['count']:
                 raise RequestCorrupted('inconsistent chunk hex and count')
             headers = list(util.chunks(bfh(hex_headers_concat), size=HEADER_SIZE))
-        # we never request more than MAX_NUM_HEADERS_IN_REQUEST headers, but we enforce those fit in a single response
         if res['max'] < MAX_NUM_HEADERS_PER_REQUEST:
             raise RequestCorrupted(f"server uses too low 'max' count for block.headers: {res['max']} < {MAX_NUM_HEADERS_PER_REQUEST}")
         if res['count'] > count:
             raise RequestCorrupted(f"asked for {count} headers but got more: {res['count']}")
         elif res['count'] < count:
-            # we only tolerate getting fewer headers if it is due to reaching the tip
             end_height = start_height + res['count'] - 1
             if end_height < self.tip:  # still below tip. why did server not send more?!
                 raise RequestCorrupted(
                     f"asked for {count} headers but got fewer: {res['count']}. ({start_height=}, {self.tip=})")
-        # checks done.
+
         return headers
 
     async def request_chunk_below_max_checkpoint(
@@ -912,7 +909,7 @@ class Interface(Logger):
         index = height // CHUNK_SIZE
         if index in self._requested_chunks:
             return None
-        self.logger.debug(f"requesting chunk from height {height}")
+        self.logger.debug(f" -interface- requesting chunk from height {height}")
         try:
             self._requested_chunks.add(index)
             headers = await self.get_block_headers(start_height=index * CHUNK_SIZE, count=CHUNK_SIZE)
@@ -1013,7 +1010,7 @@ class Interface(Logger):
                 raise GracefulDisconnect(e)
             if server_genesis_hash != constants.net.GENESIS:
                 raise GracefulDisconnect(f'server on different chain: {server_genesis_hash=}. ours: {constants.net.GENESIS}')
-            self.logger.info(f"connection established. version: {ver}, handshake duration: {(time.perf_counter() - start) * 1000:.2f} ms")
+            self.logger.debug(f"connection established. version: {ver}, handshake duration: {(time.perf_counter() - start) * 1000:.2f} ms")
 
             try:
                 async with self.taskgroup as group:
@@ -1107,7 +1104,7 @@ class Interface(Logger):
                 self._headers_cache.clear()  # to reduce memory usage
             # header processing done
             if self.is_main_server() or blockchain_updated:
-                self.logger.info(f"new chain tip. {height=}")
+                self.logger.debug(f"new chain tip. {height=}")
             if blockchain_updated:
                 util.trigger_callback('blockchain_updated')
                 self._blockchain_updated.set()
@@ -1167,11 +1164,13 @@ class Interface(Logger):
             assert (prev_last, prev_height) != (last, height), 'had to prevent infinite loop in interface.sync_until'
         return last, height
 
+
     async def step(
         self,
         height: int,
     ) -> Tuple[ChainResolutionMode, int]:
         assert 0 <= height <= self.tip, (height, self.tip)
+        
         await self._maybe_warm_headers_cache(
             from_height=height,
             to_height=min(self.tip, height+MAX_NUM_HEADERS_PER_REQUEST-1),
@@ -1182,15 +1181,13 @@ class Interface(Logger):
         chain = blockchain.check_header(header)
         if chain:
             self.blockchain = chain
-            # note: there is an edge case here that is not handled.
-            # we might know the blockhash (enough for check_header) but
-            # not have the header itself. e.g. regtest chain with only genesis.
-            # this situation resolves itself on the next block
             return ChainResolutionMode.CATCHUP, height+1
 
         can_connect = blockchain.can_connect(header)
+        
         if not can_connect:
             self.logger.info(f"can't connect new block: {height=}")
+           
             height, header, bad, bad_header = await self._search_headers_backwards(height, header=header)
             chain = blockchain.check_header(header)
             can_connect = blockchain.can_connect(header)
@@ -1219,7 +1216,7 @@ class Interface(Logger):
         while True:
             assert 0 <= good < bad, (good, bad)
             height = (good + bad) // 2
-            self.logger.info(f"binary step. good {good}, bad {bad}, height {height}")
+            self.logger.debug(f" -interface- binary step. good {good}, bad {bad}, height {height}")
             if bad - good + 1 <= MAX_NUM_HEADERS_PER_REQUEST:  # if interval is small, trade some bandwidth for lower latency
                 await self._maybe_warm_headers_cache(
                     from_height=good, to_height=bad, mode=ChainResolutionMode.BINARY)
@@ -1234,11 +1231,22 @@ class Interface(Logger):
             if good + 1 == bad:
                 break
 
-        if not self.blockchain.can_connect(bad_header, check_height=False):
-            raise Exception('unexpected bad header during binary: {}'.format(bad_header))
-        _assert_header_does_not_check_against_any_chain(bad_header)
+        # After binary search, bad_header is the first unknown header
+        # Try to connect it to the current chain
+        if self.blockchain.can_connect(bad_header, check_height=False):
+            # All good — header links to current chain
+            pass
+        else:
+            # REMOVE the Scash-specific special case
+            # The can_connect method already handles Scash properly
+            self.logger.error(f"_search_headers_binary Cannot connect header at height {height}")
+            # Add more debug info
+            self.logger.error(f"_search_headers_binary  Header prev_hash: {header.get('prev_block_hash')}")
+            self.logger.error(f"  Our tip hash: {self.get_hash(self.height()) if self.height() else 'None'}")
+            raise Exception('bad header does not link to chain')
 
-        self.logger.info(f"binary search exited. good {good}, bad {bad}. {chain=}")
+        _assert_header_does_not_check_against_any_chain(bad_header)
+        self.logger.debug(f" -interface- binary search exited. good {good}, bad {bad}. {chain=}")
         return good, bad, bad_header
 
     async def _resolve_potential_chain_fork_given_forkpoint(
@@ -1257,12 +1265,12 @@ class Interface(Logger):
         assert bh >= good, (bh, good)
         if bh == good:
             height = good + 1
-            self.logger.info(f"catching up from {height}")
+            self.logger.info(f" -interface- catching up from {height}")
             return ChainResolutionMode.NO_FORK, height
 
         # this is a new fork we don't yet have
         height = bad + 1
-        self.logger.info(f"new fork at bad height {bad}")
+        self.logger.info(f" -interface- new fork at bad height {bad}")
         b = self.blockchain.fork(bad_header)  # type: Blockchain
         self.blockchain = b
         assert b.forkpoint == bad
@@ -1306,7 +1314,7 @@ class Interface(Logger):
             delta *= 2
 
         _assert_header_does_not_check_against_any_chain(bad_header)
-        self.logger.info(f"exiting backward mode at {height}")
+        self.logger.info(f" -interface- exiting backward mode at {height}")
         return height, header, bad, bad_header
 
     @classmethod
@@ -1563,7 +1571,7 @@ class Interface(Logger):
         if not bitcoin.is_address(res):
             # note: do not hard-fail -- allow server to use future-type
             #       bitcoin address we do not recognize
-            self.logger.info(f"invalid donation address from server: {repr(res)}")
+            self.logger.info(f" -interface- invalid donation address from server: {repr(res)}")
             res = ''
         return res
 

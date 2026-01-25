@@ -21,7 +21,7 @@ from .util import (WindowModalDialog, Buttons, OkButton, CancelButton,
                    EnterButton, ColorScheme, WWLabel, read_QIcon, IconLabel, char_width_in_lineedit,
                    pubkey_to_q_icon)
 from .util import qt_event_listener, QtEventListener
-from .amountedit import BTCAmountEdit
+from .amountedit import SCASHAmountEdit
 from .fee_slider import FeeSlider, FeeComboBox
 from .my_treeview import create_toolbar_with_menu, MyTreeView
 
@@ -103,8 +103,8 @@ class SwapDialog(WindowModalDialog, QtEventListener):
         self.transport = transport
         self.server_button = SwapProvidersButton(lambda: self.transport, self.config, self.window)
         self.description_label = WWLabel(self.get_description())
-        self.send_amount_e = BTCAmountEdit(self.window.get_decimal_point)
-        self.recv_amount_e = BTCAmountEdit(self.window.get_decimal_point)
+        self.send_amount_e = SCASHAmountEdit(self.window.get_decimal_point)
+        self.recv_amount_e = SCASHAmountEdit(self.window.get_decimal_point)
         self.max_button = EnterButton(_("Max"), self.spend_max)
         btn_width = 10 * char_width_in_lineedit()
         self.max_button.setFixedWidth(btn_width)
@@ -312,9 +312,9 @@ class SwapDialog(WindowModalDialog, QtEventListener):
     def update(self):
         sm = self.swap_manager
         w_base_unit = self.window.base_unit()
-        send_icon = read_QIcon("lightning.png" if self.is_reverse else "bitcoin.png")
+        send_icon = read_QIcon("lightning.png" if self.is_reverse else "scash.png")
         self.send_label.setIcon(send_icon)
-        recv_icon = read_QIcon("lightning.png" if not self.is_reverse else "bitcoin.png")
+        recv_icon = read_QIcon("lightning.png" if not self.is_reverse else "scash.png")
         self.recv_label.setIcon(recv_icon)
         self.description_label.setText(self.get_description())
         self.description_label.repaint()  # macOS hack for #6269

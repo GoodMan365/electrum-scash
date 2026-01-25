@@ -53,6 +53,7 @@ if [[ "$3" == "release" ]] ; then
     export P4A_RELEASE_KEYALIAS_PASSWD="$4"
     export P4A_RELEASE_KEYSTORE=~/.keystore
     export P4A_RELEASE_KEYALIAS=electrum
+	#export ELECTRUM_ANDROID_NUMERIC_VERSION=4060201
     if [ -z "$P4A_RELEASE_KEYSTORE_PASSWD" ] || [ -z "$P4A_RELEASE_KEYALIAS_PASSWD" ]; then
         echo "p4a password not defined"
         exit 1
@@ -67,6 +68,7 @@ elif [[ "$3" == "debug" ]] ; then
     export P4A_DEBUG_KEYSTORE_PASSWD=unsafepassword
     export P4A_DEBUG_KEYALIAS_PASSWD=unsafepassword
     export P4A_DEBUG_KEYALIAS=electrum
+	#export ELECTRUM_ANDROID_NUMERIC_VERSION=4060201
     # create keystore if needed
     if [ ! -f "$P4A_DEBUG_KEYSTORE" ]; then
         keytool -genkey -v -keystore "$CONTRIB_ANDROID"/android_debug.keystore \

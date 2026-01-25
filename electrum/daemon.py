@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2015 Thomas Voegtlin
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -447,8 +448,8 @@ class Daemon(Logger):
         assert self.network
         self.network.start(jobs=[self.fx.run])
         # prepare lightning functionality, also load channel db early
-        if self.config.LIGHTNING_USE_GOSSIP:
-            self.network.start_gossip()
+        #if self.config.LIGHTNING_USE_GOSSIP:
+            #self.network.start_gossip()
 
     @staticmethod
     def _wallet_key_from_path(path) -> str:

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import pyqtProperty, pyqtSignal, pyqtSlot, QObject, QRegularExpression
 
-from electrum.bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_BTC
+from electrum.bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH
 from electrum.i18n import set_language, languages
 from electrum.logging import get_logger
 from electrum.util import base_unit_name_to_decimal_point
@@ -103,8 +103,8 @@ class QEConfig(AuthMixin, QObject):
     def _btcAmountRegex(self, extra_precision: int = 0):
         decimal_point = base_unit_name_to_decimal_point(self.config.get_base_unit())
         max_digits_before_dp = (
-            len(str(TOTAL_COIN_SUPPLY_LIMIT_IN_BTC))
-            + (base_unit_name_to_decimal_point("BTC") - decimal_point))
+            len(str(TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH))
+            + (base_unit_name_to_decimal_point("SCASH") - decimal_point))
         exp = '^[0-9]{0,%d}' % max_digits_before_dp
         decimal_point += extra_precision
         if decimal_point > 0:
@@ -115,11 +115,11 @@ class QEConfig(AuthMixin, QObject):
     thousandsSeparatorChanged = pyqtSignal()
     @pyqtProperty(bool, notify=thousandsSeparatorChanged)
     def thousandsSeparator(self):
-        return self.config.BTC_AMOUNTS_ADD_THOUSANDS_SEP
+        return self.config.SCASH_AMOUNTS_ADD_THOUSANDS_SEP
 
     @thousandsSeparator.setter
     def thousandsSeparator(self, checked):
-        self.config.BTC_AMOUNTS_ADD_THOUSANDS_SEP = checked
+        self.config.SCASH_AMOUNTS_ADD_THOUSANDS_SEP = checked
         self.config.amt_add_thousands_sep = checked
         self.thousandsSeparatorChanged.emit()
 
@@ -372,8 +372,8 @@ class QEConfig(AuthMixin, QObject):
         except Exception:
             return self._amount
 
-        sat_max_precision = self.config.BTC_AMOUNTS_DECIMAL_POINT
-        msat_max_precision = self.config.BTC_AMOUNTS_DECIMAL_POINT + 3
+        sat_max_precision = self.config.SCASH_AMOUNTS_DECIMAL_POINT
+        msat_max_precision = self.config.SCASH_AMOUNTS_DECIMAL_POINT + 3
         sat_max_prec_amount = int(pow(10, sat_max_precision) * x)
         msat_max_prec_amount = int(pow(10, msat_max_precision) * x)
         self._amount = QEAmount(amount_sat=sat_max_prec_amount, amount_msat=msat_max_prec_amount)
@@ -381,4 +381,4 @@ class QEConfig(AuthMixin, QObject):
 
     @pyqtSlot('quint64', result=float)
     def satsToUnits(self, satoshis):
-        return satoshis / pow(10, self.config.BTC_AMOUNTS_DECIMAL_POINT)
+        return satoshis / pow(10, self.config.SCASH_AMOUNTS_DECIMAL_POINT)

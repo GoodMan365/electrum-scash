@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2012 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -94,77 +95,77 @@ class SettingsDialog(QDialog, QtEventListener):
                 self.need_restart = True
         lang_combo.currentIndexChanged.connect(on_lang)
 
-        nz_label = HelpLabel.from_configvar(self.config.cv.BTC_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT)
+        nz_label = HelpLabel.from_configvar(self.config.cv.SCASH_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT)
         nz = QSpinBox()
         nz.setMinimum(0)
-        nz.setMaximum(self.config.BTC_AMOUNTS_DECIMAL_POINT)
+        nz.setMaximum(self.config.SCASH_AMOUNTS_DECIMAL_POINT)
         nz.setValue(self.config.num_zeros)
-        if not self.config.cv.BTC_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT.is_modifiable():
+        if not self.config.cv.SCASH_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT.is_modifiable():
             for w in [nz, nz_label]: w.setEnabled(False)
 
         def on_nz():
             value = nz.value()
             if self.config.num_zeros != value:
                 self.config.num_zeros = value
-                self.config.BTC_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT = value
+                self.config.SCASH_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT = value
                 self.app.refresh_tabs_signal.emit()
                 self.app.update_status_signal.emit()
         nz.valueChanged.connect(on_nz)
 
         # lightning
-        trampoline_cb = checkbox_from_configvar(self.config.cv.LIGHTNING_USE_GOSSIP)
-        trampoline_cb.setChecked(not self.config.LIGHTNING_USE_GOSSIP)
+        #trampoline_cb = checkbox_from_configvar(self.config.cv.LIGHTNING_USE_GOSSIP)
+        #trampoline_cb.setChecked(not self.config.LIGHTNING_USE_GOSSIP)
 
-        def on_trampoline_checked(_x):
-            use_trampoline = trampoline_cb.isChecked()
-            if not use_trampoline:
-                if not window.question('\n'.join([
-                        _("Are you sure you want to disable trampoline?"),
-                        _("Without this option, Electrum will need to sync with the Lightning network on every start."),
-                        _("This may impact the reliability of your payments."),
-                ]), parent=self):
-                    trampoline_cb.setCheckState(Qt.CheckState.Checked)
-                    return
-            self.config.LIGHTNING_USE_GOSSIP = not use_trampoline
-            if not use_trampoline:
-                self.network.start_gossip()
-            else:
-                self.network.run_from_another_thread(
-                    self.network.stop_gossip())
-            util.trigger_callback('ln_gossip_sync_progress')
-            # FIXME: update all wallet windows
-            util.trigger_callback('channels_updated', self.wallet)
-        trampoline_cb.stateChanged.connect(on_trampoline_checked)
+        # def on_trampoline_checked(_x):
+            # use_trampoline = trampoline_cb.isChecked()
+            # if not use_trampoline:
+                # if not window.question('\n'.join([
+                        # _("Are you sure you want to disable trampoline?"),
+                        # _("Without this option, Electrum will need to sync with the Lightning network on every start."),
+                        # _("This may impact the reliability of your payments."),
+                # ]), parent=self):
+                    # trampoline_cb.setCheckState(Qt.CheckState.Checked)
+                    # return
+            # self.config.LIGHTNING_USE_GOSSIP = not use_trampoline
+            # if not use_trampoline:
+                # self.network.start_gossip()
+            # else:
+                # self.network.run_from_another_thread(
+                    # self.network.stop_gossip())
+            # util.trigger_callback('ln_gossip_sync_progress')
+            # # FIXME: update all wallet windows
+            # util.trigger_callback('channels_updated', self.wallet)
+        # trampoline_cb.stateChanged.connect(on_trampoline_checked)
 
-        lnfee_hlabel = HelpLabel.from_configvar(self.config.cv.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
-        lnfee_map = [500, 1_000, 3_000, 5_000, 10_000, 20_000, 30_000, 50_000]
+        # lnfee_hlabel = HelpLabel.from_configvar(self.config.cv.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
+        # lnfee_map = [500, 1_000, 3_000, 5_000, 10_000, 20_000, 30_000, 50_000]
 
-        def lnfee_update_vlabel(fee_val: int):
-            lnfee_vlabel.setText(_("{}% of payment").format(f"{fee_val / 10 ** 4:.2f}"))
+        # def lnfee_update_vlabel(fee_val: int):
+            # lnfee_vlabel.setText(_("{}% of payment").format(f"{fee_val / 10 ** 4:.2f}"))
 
-        def lnfee_slider_moved():
-            pos = lnfee_slider.sliderPosition()
-            fee_val = lnfee_map[pos]
-            lnfee_update_vlabel(fee_val)
-            self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS = fee_val
+        # def lnfee_slider_moved():
+            # pos = lnfee_slider.sliderPosition()
+            # fee_val = lnfee_map[pos]
+            # lnfee_update_vlabel(fee_val)
+            # self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS = fee_val
 
-        lnfee_slider = QSlider(Qt.Orientation.Horizontal)
-        lnfee_slider.setRange(0, len(lnfee_map)-1)
-        lnfee_slider.setTracking(True)
-        try:
-            lnfee_spos = lnfee_map.index(self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
-        except ValueError:
-            lnfee_spos = 0
-        lnfee_slider.setSliderPosition(lnfee_spos)
-        lnfee_vlabel = QLabel("")
-        lnfee_update_vlabel(self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
-        lnfee_slider.valueChanged.connect(lnfee_slider_moved)
-        lnfee_hbox = QHBoxLayout()
-        lnfee_hbox.setContentsMargins(0, 0, 0, 0)
-        lnfee_hbox.addWidget(lnfee_vlabel)
-        lnfee_hbox.addWidget(lnfee_slider)
-        lnfee_hbox_w = QWidget()
-        lnfee_hbox_w.setLayout(lnfee_hbox)
+        # lnfee_slider = QSlider(Qt.Orientation.Horizontal)
+        # lnfee_slider.setRange(0, len(lnfee_map)-1)
+        # lnfee_slider.setTracking(True)
+        # try:
+            # lnfee_spos = lnfee_map.index(self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
+        # except ValueError:
+            # lnfee_spos = 0
+        # lnfee_slider.setSliderPosition(lnfee_spos)
+        # lnfee_vlabel = QLabel("")
+        # lnfee_update_vlabel(self.config.LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS)
+        # lnfee_slider.valueChanged.connect(lnfee_slider_moved)
+        # lnfee_hbox = QHBoxLayout()
+        # lnfee_hbox.setContentsMargins(0, 0, 0, 0)
+        # lnfee_hbox.addWidget(lnfee_vlabel)
+        # lnfee_hbox.addWidget(lnfee_slider)
+        # lnfee_hbox_w = QWidget()
+        # lnfee_hbox_w.setLayout(lnfee_hbox)
 
         alias_label = HelpLabel.from_configvar(self.config.cv.OPENALIAS_ID)
         alias = self.config.OPENALIAS_ID
@@ -173,22 +174,22 @@ class SettingsDialog(QDialog, QtEventListener):
         self.alias_e.editingFinished.connect(self.on_alias_edit)
 
 
-        msat_cb = checkbox_from_configvar(self.config.cv.BTC_AMOUNTS_PREC_POST_SAT)
-        msat_cb.setChecked(self.config.BTC_AMOUNTS_PREC_POST_SAT > 0)
+        # msat_cb = checkbox_from_configvar(self.config.cv.SCASH_AMOUNTS_PREC_POST_SAT)
+        # msat_cb.setChecked(self.config.SCASH_AMOUNTS_PREC_POST_SAT > 0)
 
-        def on_msat_checked(_x):
-            prec = 3 if msat_cb.isChecked() else 0
-            if self.config.amt_precision_post_satoshi != prec:
-                self.config.amt_precision_post_satoshi = prec
-                self.config.BTC_AMOUNTS_PREC_POST_SAT = prec
-                self.app.refresh_tabs_signal.emit()
+        # def on_msat_checked(_x):
+            # prec = 3 if msat_cb.isChecked() else 0
+            # if self.config.amt_precision_post_satoshi != prec:
+                # self.config.amt_precision_post_satoshi = prec
+                # self.config.SCASH_AMOUNTS_PREC_POST_SAT = prec
+                # self.app.refresh_tabs_signal.emit()
 
-        msat_cb.stateChanged.connect(on_msat_checked)
+        # msat_cb.stateChanged.connect(on_msat_checked)
 
         # units
         units = base_units_list
         msg = (_('Base unit of your wallet.')
-               + '\n1 BTC = 1000 mBTC. 1 mBTC = 1000 bits. 1 bit = 100 sat.\n'
+               + '\n1 SCASH = 1000 mSCASH. 1 mSCASH = 1000 bits. 1 bit = 100 sat.\n'
                + _('This setting affects the Send tab, and all balance related fields.'))
         unit_label = HelpLabel(_('Base unit') + ':', msg)
         unit_combo = QComboBox()
@@ -200,20 +201,20 @@ class SettingsDialog(QDialog, QtEventListener):
             if self.config.get_base_unit() == unit_result:
                 return
             self.config.set_base_unit(unit_result)
-            nz.setMaximum(self.config.BTC_AMOUNTS_DECIMAL_POINT)
+            nz.setMaximum(self.config.SCASH_AMOUNTS_DECIMAL_POINT)
             self.app.refresh_tabs_signal.emit()
             self.app.update_status_signal.emit()
             self.app.refresh_amount_edits_signal.emit()
         unit_combo.currentIndexChanged.connect(lambda x: on_unit(x, nz))
 
-        thousandsep_cb = checkbox_from_configvar(self.config.cv.BTC_AMOUNTS_ADD_THOUSANDS_SEP)
-        thousandsep_cb.setChecked(self.config.BTC_AMOUNTS_ADD_THOUSANDS_SEP)
+        thousandsep_cb = checkbox_from_configvar(self.config.cv.SCASH_AMOUNTS_ADD_THOUSANDS_SEP)
+        thousandsep_cb.setChecked(self.config.SCASH_AMOUNTS_ADD_THOUSANDS_SEP)
 
         def on_set_thousandsep(_x):
             checked = thousandsep_cb.isChecked()
             if self.config.amt_add_thousands_sep != checked:
                 self.config.amt_add_thousands_sep = checked
-                self.config.BTC_AMOUNTS_ADD_THOUSANDS_SEP = checked
+                self.config.SCASH_AMOUNTS_ADD_THOUSANDS_SEP = checked
                 self.app.refresh_tabs_signal.emit()
         thousandsep_cb.stateChanged.connect(on_set_thousandsep)
 
@@ -384,11 +385,11 @@ class SettingsDialog(QDialog, QtEventListener):
         units_widgets = []
         units_widgets.append((unit_label, unit_combo))
         units_widgets.append((nz_label, nz))
-        units_widgets.append((msat_cb, None))
+        #units_widgets.append((msat_cb, None))
         units_widgets.append((thousandsep_cb, None))
-        lightning_widgets = []
-        lightning_widgets.append((trampoline_cb, None))
-        lightning_widgets.append((lnfee_hlabel, lnfee_hbox_w))
+        # lightning_widgets = []
+        # lightning_widgets.append((trampoline_cb, None))
+        # lightning_widgets.append((lnfee_hlabel, lnfee_hbox_w))
         fiat_widgets = []
         fiat_widgets.append((QLabel(_('Fiat currency')), ccy_combo))
         fiat_widgets.append((QLabel(_('Source')), ex_combo))
@@ -404,7 +405,7 @@ class SettingsDialog(QDialog, QtEventListener):
             (gui_widgets, _('Appearance')),
             (units_widgets, _('Units')),
             (fiat_widgets, _('Fiat')),
-            (lightning_widgets, _('Lightning')),
+            #(lightning_widgets, _('Lightning')),
             (misc_widgets, _('Misc')),
         ]
         for widgets, name in tabs_info:

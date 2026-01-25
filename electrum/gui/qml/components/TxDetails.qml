@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -447,7 +447,7 @@ Pane {
                             }
                     } else if (txdetails.wallet.isWatchOnly) {
                         msg = qsTr('This transaction should be signed. Present this QR code to the signing device')
-                    } else if (txdetails.wallet.isMultisig && txdetails.wallet.walletType != '2fa') {
+                    } else if (txdetails.wallet.isMultisig) {
                         if (txdetails.canSign) {
                             msg = qsTr('Note: this wallet can sign, but has not signed this transaction yet')
                         } else {

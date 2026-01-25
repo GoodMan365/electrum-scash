@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2012 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -74,12 +75,12 @@ from electrum.simple_config import SimpleConfig
 from electrum.logging import Logger
 from electrum.lntransport import extract_nodeid, ConnStringFormatError
 from electrum.lnaddr import lndecode
-from electrum.submarine_swaps import SwapServerTransport, NostrTransport
+#from electrum.submarine_swaps import SwapServerTransport, NostrTransport
 from electrum.fee_policy import FeePolicy
 
 from .rate_limiter import rate_limited
 from .exception_window import Exception_Hook
-from .amountedit import BTCAmountEdit
+from .amountedit import SCASHAmountEdit
 from .qrcodewidget import QRDialog
 from .qrtextedit import ShowQRTextEdit, ScanQRTextEdit, ScanShowQRTextEdit
 from .transaction_dialog import show_transaction
@@ -179,9 +180,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         assert wallet, "no wallet"
         self.wallet = wallet
         self._protected_requires_password = self.wallet.has_keystore_encryption
-        if wallet.has_lightning() and not self.config.cv.GUI_QT_SHOW_TAB_CHANNELS.is_set():
-            self.config.GUI_QT_SHOW_TAB_CHANNELS = True  # override default, but still allow disabling tab manually
-
+        #if False and wallet.has_lightning() and not self.config.cv.GUI_QT_SHOW_TAB_CHANNELS.is_set():
+        #    self.config.GUI_QT_SHOW_TAB_CHANNELS = True  # override default, but still allow disabling tab manually
+        self.config.GUI_QT_SHOW_TAB_CHANNELS = False
         Exception_Hook.maybe_setup(config=self.config, wallet=self.wallet)
 
         self.network = gui_object.daemon.network  # type: Network
@@ -218,7 +219,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.console_tab = self.create_console_tab()
         self.notes_tab = self.create_notes_tab()
         self.contacts_tab = self.create_contacts_tab()
-        self.channels_tab = self.create_channels_tab()
+        #self.channels_tab = self.create_channels_tab() if self.wallet.has_lightning() else None
+        self.channels_tab = None  # SCASH: Lightning disabled
         tabs.addTab(self.create_history_tab(), read_QIcon("tab_history.png"), _('History'))
         tabs.addTab(self.send_tab, read_QIcon("tab_send.png"), _('Send'))
         tabs.addTab(self.receive_tab, read_QIcon("tab_receive.png"), _('Receive'))
@@ -231,7 +233,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
                 tabs.addTab(tab, icon, description.replace("&", ""))
 
         add_optional_tab(tabs, self.addresses_tab, read_QIcon("tab_addresses.png"), _("&Addresses"))
-        add_optional_tab(tabs, self.channels_tab, read_QIcon("lightning.png"), _("Channels"))
+        #add_optional_tab(tabs, self.channels_tab, read_QIcon("lightning.png"), _("Channels"))
         add_optional_tab(tabs, self.utxo_tab, read_QIcon("tab_coins.png"), _("Co&ins"))
         add_optional_tab(tabs, self.contacts_tab, read_QIcon("tab_contacts.png"), _("Con&tacts"))
         add_optional_tab(tabs, self.console_tab, read_QIcon("tab_console.png"), _("Con&sole"))
@@ -252,7 +254,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         if self.config.GUI_QT_WINDOW_IS_MAXIMIZED:
             self.showMaximized()
 
-        self.setWindowIcon(read_QIcon("electrum.png"))
+        self.setWindowIcon(read_QIcon("electrum-scash-128.png"))
         self.init_menubar()
 
         wrtabs = weakref.proxy(tabs)
@@ -403,6 +405,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.address_list.refresh_all()
 
     def toggle_tab(self, tab):
+        if tab is None:
+            return  # Can't toggle a None tab
         show = not tab.is_shown_cv.get()
         tab.is_shown_cv.set(show)
         if show:
@@ -523,19 +527,21 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
 
     @qt_event_listener
     def on_event_gossip_db_loaded(self, *args):
-        self.channels_list.gossip_db_loaded.emit(*args)
+        #self.channels_list.gossip_db_loaded.emit(*args)
+        pass
 
     @qt_event_listener
     def on_event_channels_updated(self, *args):
         wallet = args[0]
         if wallet == self.wallet:
-            self.channels_list.update_rows.emit(*args)
+            #self.channels_list.update_rows.emit(*args)
+            pass
 
     @qt_event_listener
     def on_event_channel(self, *args):
         wallet = args[0]
         if wallet == self.wallet:
-            self.channels_list.update_single_row.emit(*args)
+            #self.channels_list.update_single_row.emit(*args)
             self.update_status()
 
     @qt_event_listener
@@ -561,7 +567,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
 
     @qt_event_listener
     def on_event_ln_gossip_sync_progress(self, *args):
-        self.update_lightning_icon()
+        #self.update_lightning_icon()
+        pass
 
     @qt_event_listener
     def on_event_cert_mismatch(self, *args):
@@ -587,8 +594,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
     @profiler
     def load_wallet(self, wallet: Abstract_Wallet):
         self.update_recently_opened_menu()
-        if wallet.has_lightning():
-            util.trigger_callback('channels_updated', wallet)
+        if False and wallet.has_lightning():
+            pass
+            #util.trigger_callback('channels_updated', wallet)
         self.need_update.set()
         # Once GUI has been initialized check if we want to announce something since the callback has been called before the GUI was initialized
         # update menus
@@ -598,7 +606,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.update_console()
         self.receive_tab.do_clear()
         self.receive_tab.request_list.update()
-        self.channels_list.update()
+        #self.channels_list.update()
         self.tabs.show()
         self.init_geometry()
         if self.config.GUI_QT_HIDE_ON_STARTUP and self.gui_object.tray.isVisible():
@@ -629,7 +637,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
 
     @classmethod
     def get_app_name_and_version_str(cls) -> str:
-        name = "Electrum"
+        name = "Electrum-Scash"
         if constants.net.TESTNET:
             name += " " + constants.net.NET_NAME.capitalize()
         return f"{name} {ELECTRUM_VERSION}"
@@ -651,8 +659,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         if self.wallet.is_watching_only():
             msg = ' '.join([
                 _("This wallet is watching-only."),
-                _("This means you will not be able to spend Bitcoins with it."),
-                _("Make sure you own the seed phrase or the private keys, before you request Bitcoins to be sent to this wallet.")
+                _("This means you will not be able to spend Scash with it."),
+                _("Make sure you own the seed phrase or the private keys, before you request scash to be sent to this wallet.")
             ])
             self.show_warning(msg, title=_('Watch-only wallet'))
 
@@ -707,12 +715,12 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         backup_dir = self.config.WALLET_BACKUP_DIRECTORY
         backup_dir_label = HelpLabel(_('Backup directory') + ':', backup_help)
         msg = _('Please select a backup directory')
-        if self.wallet.has_lightning() and self.wallet.lnworker.channels:
-            msg += '\n\n' + ' '.join([
-                _("Note that lightning channels will be converted to channel backups."),
-                _("You cannot use channel backups to perform lightning payments."),
-                _("Channel backups can only be used to request your channels to be closed.")
-            ])
+        # if self.wallet.has_lightning() and self.wallet.lnworker.channels:
+            # msg += '\n\n' + ' '.join([
+                # _("Note that lightning channels will be converted to channel backups."),
+                # _("You cannot use channel backups to perform lightning payments."),
+                # _("Channel backups can only be used to request your channels to be closed.")
+            # ])
         self.backup_dir_e = QPushButton(backup_dir)
         self.backup_dir_e.clicked.connect(self.select_backup_dir)
         grid.addWidget(backup_dir_label, 1, 0)
@@ -799,6 +807,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.wallet_menu.addSeparator()
 
         def add_toggle_action(tab):
+            # if self.channels_tab is not None:
+                # add_toggle_action(self.channels_tab)
+            if tab is None:
+                return
             is_shown = tab.is_shown_cv.get()
             tab.menu_action = self.view_menu.addAction(tab.tab_description, lambda: self.toggle_tab(tab))
             tab.menu_action.setCheckable(True)
@@ -806,7 +818,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.view_menu = menubar.addMenu(_("&View"))
         add_toggle_action(self.addresses_tab)
         add_toggle_action(self.utxo_tab)
-        add_toggle_action(self.channels_tab)
+        #add_toggle_action(self.channels_tab)
         add_toggle_action(self.contacts_tab)
         add_toggle_action(self.console_tab)
         add_toggle_action(self.notes_tab)
@@ -865,18 +877,19 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         if d:
             self.show_send_tab()
             host = self.network.get_parameters().server.host
-            self.handle_payment_identifier('bitcoin:%s?message=donation for %s' % (d, host))
+            #self.handle_payment_identifier('bitcoin:%s?message=donation for %s' % (d, host))
+            self.handle_payment_identifier('scash:%s?message=donation for %s' % (d, host))
         else:
             self.show_error(_('No donation address for this server'))
 
     def show_about(self):
         QMessageBox.about(self, "Electrum",
                           (_("Version")+" %s" % ELECTRUM_VERSION + "\n\n" +
-                           _("Electrum's focus is speed, with low resource usage and simplifying Bitcoin.") + " " +
+                           _("Electrum-Scash's focus is speed, with low resource usage and simplifying Scash.") + " " +
                            _("You do not need to perform regular backups, because your wallet can be "
                               "recovered from a secret phrase that you can memorize or write on paper.") + " " +
                            _("Startup times are instant because it operates in conjunction with high-performance "
-                              "servers that handle the most complicated parts of the Bitcoin system.") + "\n\n" +
+                              "servers that handle the most complicated parts of the Scash system.") + "\n\n" +
                            _("Uses icons from the Icons8 icon pack (icons8.com).")))
 
     def show_bitcoin_paper(self):
@@ -1005,7 +1018,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         return self.config.format_fee_rate(fee_rate)
 
     def get_decimal_point(self):
-        return self.config.BTC_AMOUNTS_DECIMAL_POINT
+        return self.config.SCASH_AMOUNTS_DECIMAL_POINT
 
     def base_unit(self):
         return self.config.get_base_unit()
@@ -1060,7 +1073,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         elif self.network.is_connected():
             server_height = self.network.get_server_height()
             server_lag = self.network.get_local_height() - server_height
-            fork_str = "_fork" if len(self.network.get_blockchains())>1 else ""
+            fork_str = "_fork" if len(self.network.get_blockchains()) > 1 else ""
             # Server height can be 0 after switching to a new server
             # until we get a headers subscription request response.
             # Display the synchronizing message in that case.
@@ -1071,31 +1084,54 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
                 icon = read_QIcon("status_waiting.png")
             elif server_lag > 1:
                 network_text = _("Server is lagging ({} blocks)").format(server_lag)
-                icon = read_QIcon("status_lagging%s.png"%fork_str)
+                icon = read_QIcon("status_lagging%s.png" % fork_str)
             else:
                 network_text = _("Connected")
                 p_bal = self.wallet.get_balances_for_piechart()
-                self.balance_label.update_list(
-                    [
-                        (_('Frozen'), COLOR_FROZEN, p_bal.frozen),
-                        (_('Unmatured'), COLOR_UNMATURED, p_bal.unmatured),
-                        (_('Unconfirmed'), COLOR_UNCONFIRMED, p_bal.unconfirmed),
-                        (_('On-chain'), COLOR_CONFIRMED, p_bal.confirmed),
-                        (_('Lightning'), COLOR_LIGHTNING, p_bal.lightning),
-                        (_('Lightning frozen'), COLOR_FROZEN_LIGHTNING, p_bal.lightning_frozen),
-                    ],
-                    warning = self.wallet.is_low_reserve(),
-                )
-                balance = p_bal.total()
-                balance_text =  _("Balance") + ": %s "%(self.format_amount_and_units(balance))
+                
+                # MODIFIED: Remove Lightning balances for Scash
+                # Check if wallet supports Lightning
+                if hasattr(self.wallet, 'has_lightning') and self.wallet.has_lightning():
+                    # Original with Lightning
+                    self.balance_label.update_list(
+                        [
+                            (_('Frozen'), COLOR_FROZEN, p_bal.frozen),
+                            (_('Unmatured'), COLOR_UNMATURED, p_bal.unmatured),
+                            (_('Unconfirmed'), COLOR_UNCONFIRMED, p_bal.unconfirmed),
+                            (_('On-chain'), COLOR_CONFIRMED, p_bal.confirmed),
+                            (_('Lightning'), COLOR_LIGHTNING, p_bal.lightning),
+                            (_('Lightning frozen'), COLOR_FROZEN_LIGHTNING, p_bal.lightning_frozen),
+                        ],
+                        warning=self.wallet.is_low_reserve(),
+                    )
+                    # Calculate total including Lightning
+                    balance = p_bal.total()
+                else:
+                    # Scash version without Lightning
+                    self.balance_label.update_list(
+                        [
+                            (_('Frozen'), COLOR_FROZEN, p_bal.frozen),
+                            (_('Unmatured'), COLOR_UNMATURED, p_bal.unmatured),
+                            (_('Unconfirmed'), COLOR_UNCONFIRMED, p_bal.unconfirmed),
+                            (_('On-chain'), COLOR_CONFIRMED, p_bal.confirmed),
+                        ],
+                        warning=self.wallet.is_low_reserve(),
+                    )
+                    # Calculate total WITHOUT Lightning balances
+                    # p_bal.lightning and p_bal.lightning_frozen should be 0 for Scash,
+                    # but let's be explicit
+                    balance = (p_bal.frozen + p_bal.unmatured + 
+                              p_bal.unconfirmed + p_bal.confirmed)
+                
+                balance_text = _("Balance") + ": %s " % (self.format_amount_and_units(balance))
                 # append fiat balance and price
                 if self.fx.is_enabled():
                     balance_text += self.fx.get_fiat_status_text(balance,
                         self.base_unit(), self.get_decimal_point()) or ''
                 if not self.network.proxy or not self.network.proxy.enabled:
-                    icon = read_QIcon("status_connected%s.png"%fork_str)
+                    icon = read_QIcon("status_connected%s.png" % fork_str)
                 else:
-                    icon = read_QIcon("status_connected_proxy%s.png"%fork_str)
+                    icon = read_QIcon("status_connected_proxy%s.png" % fork_str)
         else:
             if self.network.proxy and self.network.proxy.enabled:
                 network_text = "{} ({})".format(_("Not connected"), _("proxy enabled"))
@@ -1145,7 +1181,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.address_list.update()
         self.utxo_list.update()
         self.contact_list.update()
-        self.channels_list.update_rows.emit(wallet)
+        #self.channels_list.update_rows.emit(wallet)
         self.update_completions()
 
     def refresh_tabs(self, wallet=None):
@@ -1155,13 +1191,16 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         self.address_list.refresh_all()
         self.utxo_list.refresh_all()
         self.contact_list.refresh_all()
-        self.channels_list.update_rows.emit(self.wallet)
+        #self.channels_list.update_rows.emit(self.wallet)
 
     def create_channels_tab(self):
-        self.channels_list = ChannelsList(self)
-        tab = self.create_list_tab(self.channels_list)
-        tab.is_shown_cv = self.config.cv.GUI_QT_SHOW_TAB_CHANNELS
-        return tab
+        #if constants.net.NET_NAME == 'scash':
+        #    return None
+        # self.channels_list = ChannelsList(self)
+        # tab = self.create_list_tab(self.channels_list)
+        # tab.is_shown_cv = self.config.cv.GUI_QT_SHOW_TAB_CHANNELS
+        # return tab
+        return None
 
     def create_history_tab(self):
         self.history_model = HistoryModel(self)
@@ -1208,9 +1247,12 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         )
 
     def show_lightning_transaction(self, tx_item):
-        from .lightning_tx_dialog import LightningTxDialog
-        d = LightningTxDialog(self, tx_item)
-        d.show()
+        if constants.net.NET_NAME == 'scash':
+            pass
+        else:
+            from .lightning_tx_dialog import LightningTxDialog
+            d = LightningTxDialog(self, tx_item)
+            d.show()
 
     def create_receive_tab(self):
         from .receive_tab import ReceiveTab
@@ -1298,23 +1340,23 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
             except UserCancelled:
                 return False
 
-    def create_sm_transport(self) -> Optional['SwapServerTransport']:
-        sm = self.wallet.lnworker.swap_manager
-        if sm.is_server:
-            self.show_error(_('Swap server is active'))
-            return None
+    # def create_sm_transport(self) -> Optional['SwapServerTransport']:
+        # sm = self.wallet.lnworker.swap_manager
+        # if sm.is_server:
+            # self.show_error(_('Swap server is active'))
+            # return None
 
-        if self.network is None:
-            return None
+        # if self.network is None:
+            # return None
 
-        if not self.config.SWAPSERVER_URL and not self.config.SWAPSERVER_NPUB:
-            if not self.question('\n'.join([
-                    _('Electrum uses Nostr in order to find liquidity providers.'),
-                    _('Do you want to enable Nostr?'),
-            ])):
-                return None
+        # if not self.config.SWAPSERVER_URL and not self.config.SWAPSERVER_NPUB:
+            # if not self.question('\n'.join([
+                    # _('Electrum uses Nostr in order to find liquidity providers.'),
+                    # _('Do you want to enable Nostr?'),
+            # ])):
+                # return None
 
-        return sm.create_transport()
+        # return sm.create_transport()
 
     def initialize_swap_manager(self, transport: 'SwapServerTransport'):
         sm = self.wallet.lnworker.swap_manager
@@ -1344,32 +1386,32 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         assert sm.is_initialized.is_set()
         return True
 
-    def choose_swapserver_dialog(self, transport: NostrTransport) -> bool:
-        assert isinstance(transport, NostrTransport)
-        if not transport.is_connected.is_set():
-            self.show_message(
-                '\n'.join([
-                    _('Could not connect to a Nostr relay.'),
-                    _('Please check your relays and network connection'),
-                ]))
-            return False
-        recent_offers = transport.get_recent_offers()
-        if not recent_offers:
-            self.show_message(
-                '\n'.join([
-                    _('Could not find a swap provider.'),
-                ]))
-            return False
-        sm = self.wallet.lnworker.swap_manager
-        from .swap_dialog import SwapServerDialog
-        d = SwapServerDialog(self, recent_offers)
-        choice = d.run()
-        if choice is None:
-            return False
-        self.config.SWAPSERVER_NPUB = choice
-        offer = transport.get_offer(choice)
-        sm.update_pairs(offer.pairs)
-        return True
+    # def choose_swapserver_dialog(self, transport: NostrTransport) -> bool:
+        # assert isinstance(transport, NostrTransport)
+        # if not transport.is_connected.is_set():
+            # self.show_message(
+                # '\n'.join([
+                    # _('Could not connect to a Nostr relay.'),
+                    # _('Please check your relays and network connection'),
+                # ]))
+            # return False
+        # recent_offers = transport.get_recent_offers()
+        # if not recent_offers:
+            # self.show_message(
+                # '\n'.join([
+                    # _('Could not find a swap provider.'),
+                # ]))
+            # return False
+        # sm = self.wallet.lnworker.swap_manager
+        # from .swap_dialog import SwapServerDialog
+        # d = SwapServerDialog(self, recent_offers)
+        # choice = d.run()
+        # if choice is None:
+            # return False
+        # self.config.SWAPSERVER_NPUB = choice
+        # offer = transport.get_offer(choice)
+        # sm.update_pairs(offer.pairs)
+        # return True
 
     @qt_event_listener
     def on_event_request_status(self, wallet, key, status):
@@ -1795,7 +1837,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
             'util': util,
             'bitcoin': bitcoin,
             'lnutil': lnutil,
-            'channels': list(self.wallet.lnworker.channels.values()) if self.wallet.lnworker else [],
+            #'channels': list(self.wallet.lnworker.channels.values()) if self.wallet.lnworker else [],
+            'channels': [],
             'scan_qr': scan_qr_from_screenshot,
         })
 
@@ -1869,9 +1912,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         sb.addPermanentWidget(StatusBarButton(read_QIcon("preferences.png"), _("Preferences"), self.settings_dialog, sb_height))
         self.seed_button = StatusBarButton(read_QIcon("seed.png"), _("Seed"), self.show_seed_dialog, sb_height)
         sb.addPermanentWidget(self.seed_button)
-        self.lightning_button = StatusBarButton(read_QIcon("lightning.png"), _("Lightning Network"), self.gui_object.show_lightning_dialog, sb_height)
-        sb.addPermanentWidget(self.lightning_button)
-        self.update_lightning_icon()
+        # self.lightning_button = StatusBarButton(read_QIcon("lightning.png"), _("Lightning Network"), self.gui_object.show_lightning_dialog, sb_height)
+        # sb.addPermanentWidget(self.lightning_button)
+        # self.update_lightning_icon()
         self.status_button = None
         self.tor_button = None
         if self.network:
@@ -1924,31 +1967,22 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
 
     def update_lightning_icon(self):
         if not self.wallet.has_lightning():
-            self.lightning_button.setVisible(False)
             return
         if self.network is None or self.network.channel_db is None:
-            self.lightning_button.setVisible(False)
             return
-        self.lightning_button.setVisible(True)
+
 
         cur, total, progress_percent = self.network.lngossip.get_sync_progress_estimate()
         # self.logger.debug(f"updating lngossip sync progress estimate: cur={cur}, total={total}")
         progress_str = "??%"
         if progress_percent is not None:
             progress_str = f"{progress_percent}%"
-        if progress_percent and progress_percent >= 100:
-            self.lightning_button.setMaximumWidth(25)
-            self.lightning_button.setText('')
-            self.lightning_button.setToolTip(_("The Lightning Network graph is fully synced."))
-        else:
-            self.lightning_button.setMaximumWidth(25 + 5 * char_width_in_lineedit())
-            self.lightning_button.setText(progress_str)
-            self.lightning_button.setToolTip(_("The Lightning Network graph is syncing...\n"
-                                               "Payments are more likely to succeed with a more complete graph."))
 
     def update_lock_icon(self):
         icon = read_QIcon("lock.png") if self.wallet.has_password() and (self.wallet.get_unlocked_password() is None) else read_QIcon("unlock.png")
         self.password_button.setIcon(icon)
+    
+    
 
     def update_buttons_on_seed(self):
         self.seed_button.setVisible(self.wallet.has_seed())
@@ -2878,7 +2912,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, Logger, QtEventListener):
         output_amount = QLabel('')
         grid.addWidget(QLabel(_('Output amount') + ':'), 2, 0)
         grid.addWidget(output_amount, 2, 1)
-        fee_e = BTCAmountEdit(self.get_decimal_point)
+        fee_e = SCASHAmountEdit(self.get_decimal_point)
         combined_fee = QLabel('')
         combined_feerate = QLabel('')
         def on_fee_edit(x):

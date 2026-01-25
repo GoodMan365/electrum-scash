@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2012 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -135,8 +136,6 @@ class TxInOutWidget(QWidget):
             legend=_("Change Address"), color=ColorScheme.YELLOW, tooltip=_("Wallet change address"))
         self.txo_color_accounting = TxOutputColoring(
             legend=_("Accounting Address"), color=ColorScheme.ORANGE, tooltip=_("Address from which funds were swept to your wallet."))
-        self.txo_color_2fa = TxOutputColoring(
-            legend=_("TrustedCoin (2FA) batch fee"), color=ColorScheme.BLUE, tooltip=_("TrustedCoin (2FA) fee for the next batch of transactions"))
         self.txo_color_swap = TxOutputColoring(
             legend=_("Submarine swap address"), color=ColorScheme.BLUE, tooltip=_("Submarine swap address"))
         self.outputs_header = QLabel()
@@ -154,7 +153,6 @@ class TxInOutWidget(QWidget):
         outheader_hbox.addStretch(2)
         outheader_hbox.addWidget(self.txo_color_recv.legend_label)
         outheader_hbox.addWidget(self.txo_color_change.legend_label)
-        outheader_hbox.addWidget(self.txo_color_2fa.legend_label)
         outheader_hbox.addWidget(self.txo_color_swap.legend_label)
         outheader_hbox.addWidget(self.txo_color_accounting.legend_label)
 
@@ -182,11 +180,11 @@ class TxInOutWidget(QWidget):
         lnk.setToolTip(_('Click to open, right-click for menu'))
         lnk.setAnchor(True)
         lnk.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
-        tf_used_recv, tf_used_change, tf_used_2fa, tf_used_swap = False, False, False, False
+        tf_used_recv, tf_used_change, tf_used_swap = False, False, False
         tf_used_accounting = False
 
         def addr_text_format(addr: str) -> QTextCharFormat:
-            nonlocal tf_used_recv, tf_used_change, tf_used_2fa, tf_used_swap, tf_used_accounting
+            nonlocal tf_used_recv, tf_used_change, tf_used_swap, tf_used_accounting
             sm = self.wallet.lnworker.swap_manager if self.wallet.lnworker else None
             if self.wallet.is_mine(addr):
                 if self.wallet.is_change(addr):
@@ -203,9 +201,6 @@ class TxInOutWidget(QWidget):
             elif sm and sm.is_lockup_address_for_a_swap(addr) or addr == DummyAddress.SWAP:
                 tf_used_swap = True
                 return self.txo_color_swap.text_char_format
-            elif self.wallet.is_billing_address(addr):
-                tf_used_2fa = True
-                return self.txo_color_2fa.text_char_format
             elif self.wallet.is_accounting_address(addr):
                 tf_used_accounting = True
                 return self.txo_color_accounting.text_char_format
@@ -308,7 +303,6 @@ class TxInOutWidget(QWidget):
 
         self.txo_color_recv.legend_label.setVisible(tf_used_recv)
         self.txo_color_change.legend_label.setVisible(tf_used_change)
-        self.txo_color_2fa.legend_label.setVisible(tf_used_2fa)
         self.txo_color_swap.legend_label.setVisible(tf_used_swap)
         self.txo_color_accounting.legend_label.setVisible(tf_used_accounting)
 

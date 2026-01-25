@@ -1,4 +1,5 @@
 # Copyright (C) 2022 The Electrum developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 
@@ -14,7 +15,7 @@ from electrum.util import InvoiceError, ChoiceItem
 from electrum.invoices import pr_expiration_values
 from electrum.logging import Logger
 
-from .amountedit import AmountEdit, BTCAmountEdit, SizedFreezableLineEdit
+from .amountedit import AmountEdit, SCASHAmountEdit, SizedFreezableLineEdit
 from .qrcodewidget import QRCodeWidget
 from .util import read_QIcon, WWLabel, MessageBoxMixin, MONOSPACE_FONT, get_icon_qrcode
 
@@ -51,7 +52,7 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
         grid.addWidget(QLabel(_('Description')), 0, 0)
         grid.addWidget(self.receive_message_e, 0, 1, 1, 4)
 
-        self.receive_amount_e = BTCAmountEdit(self.window.get_decimal_point)
+        self.receive_amount_e = SCASHAmountEdit(self.window.get_decimal_point)
         grid.addWidget(QLabel(_('Requested amount')), 1, 0)
         grid.addWidget(self.receive_amount_e, 1, 1)
 
@@ -69,20 +70,16 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
 
         self.clear_invoice_button = QPushButton(_('Clear'))
         self.clear_invoice_button.clicked.connect(self.do_clear)
-        text = _('Onchain') if self.wallet.has_lightning() else _('Request')
-        self.create_onchain_invoice_button = QPushButton(text)
-        self.create_onchain_invoice_button.setIcon(read_QIcon("bitcoin.png"))
+        # SCASH: Lightning disabled, only onchain requests
+        self.create_onchain_invoice_button = QPushButton(_('Request'))
+        self.create_onchain_invoice_button.setIcon(read_QIcon("scash.png"))
         self.create_onchain_invoice_button.clicked.connect(lambda: self.create_invoice(False))
-        self.create_lightning_invoice_button = QPushButton(_('Lightning'))
-        self.create_lightning_invoice_button.setIcon(read_QIcon("lightning.png"))
-        self.create_lightning_invoice_button.clicked.connect(lambda: self.create_invoice(True))
-        self.create_lightning_invoice_button.setVisible(self.wallet.has_lightning())
-
+        # Lightning button removed for SCASH
         self.receive_buttons = buttons = QHBoxLayout()
         buttons.addWidget(self.clear_invoice_button)
         buttons.addStretch(1)
         buttons.addWidget(self.create_onchain_invoice_button)
-        buttons.addWidget(self.create_lightning_invoice_button)
+        # Lightning button removed
         grid.addLayout(buttons, 4, 1, 1, -1)
 
         self.receive_e = QTextEdit()
@@ -96,27 +93,14 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
 
         self.receive_help_text = WWLabel('')
         self.receive_help_text.setLayout(QHBoxLayout())
-        self.receive_rebalance_button = QPushButton('Rebalance')
-        self.receive_rebalance_button.suggestion = None
+        # SCASH: Lightning rebalance/swap buttons removed
         self.receive_zeroconf_button = QPushButton(_('Accept'))
         self.receive_zeroconf_button.clicked.connect(self.on_accept_zeroconf)
 
-        def on_receive_rebalance():
-            if self.receive_rebalance_button.suggestion:
-                chan1, chan2, delta = self.receive_rebalance_button.suggestion
-                self.window.rebalance_dialog(chan1, chan2, amount_sat=delta)
-        self.receive_rebalance_button.clicked.connect(on_receive_rebalance)
-        self.receive_swap_button = QPushButton('Swap')
-        self.receive_swap_button.suggestion = None
-
-        def on_receive_swap():
-            if self.receive_swap_button.suggestion:
-                chan, swap_recv_amount_sat = self.receive_swap_button.suggestion
-                self.window.run_swap_dialog(is_reverse=True, recv_amount_sat_or_max=swap_recv_amount_sat, channels=[chan])
-        self.receive_swap_button.clicked.connect(on_receive_swap)
+        # SCASH: Lightning rebalance function removed
+        # SCASH: Lightning swap function removed
         buttons = QHBoxLayout()
-        buttons.addWidget(self.receive_rebalance_button)
-        buttons.addWidget(self.receive_swap_button)
+        # SCASH: Lightning buttons removed
         buttons.addWidget(self.receive_zeroconf_button)
         vbox = QVBoxLayout()
         vbox.addWidget(self.receive_help_text)
@@ -127,7 +111,6 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
 
         self.receive_widget = ReceiveWidget(
             self, self.receive_e, self.receive_qr, self.receive_help_widget)
-        #self.receive_widget.mouseReleaseEvent = lambda x: self.toggle_receive_qr()
 
         receive_widget_sp = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         receive_widget_sp.setRetainSizeWhenHidden(True)
@@ -192,7 +175,7 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
             _('The bitcoin address never expires and will always be part of this electrum wallet.'), ' ',
             _('You can reuse a bitcoin address any number of times but it is not good for your privacy.'),
             '\n\n',
-            _('For Lightning requests, payments will not be accepted after the expiration.'),
+            # SCASH: Lightning expiration note removed
         ])
         expiry = self.config.WALLET_PAYREQ_EXPIRY_SECONDS
         choices = [ChoiceItem(key=exptime, label=label)
@@ -237,19 +220,14 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
         help_texts = self.wallet.get_help_texts_for_receive_request(req)
         self.addr = (req.get_address() or '') if not help_texts.address_is_error else ''
         self.URI = (self.wallet.get_request_URI(req) or '') if not help_texts.URI_is_error else ''
-        self.lnaddr = self.wallet.get_bolt11_invoice(req) if not help_texts.ln_is_error else ''
+        # SCASH: Lightning invoice removed
+        self.lnaddr = ''
         self.address_help = help_texts.address_help
         self.URI_help = help_texts.URI_help
-        self.ln_help = help_texts.ln_help
-        can_rebalance = help_texts.can_rebalance()
-        can_swap = help_texts.can_swap()
+        self.ln_help = ''
+        # SCASH: Lightning rebalance/swap/zeroconf checks removed
         can_zeroconf = help_texts.can_zeroconf()
-        self.receive_rebalance_button.suggestion = help_texts.ln_rebalance_suggestion
-        self.receive_swap_button.suggestion = help_texts.ln_swap_suggestion
-        self.receive_rebalance_button.setVisible(can_rebalance)
-        self.receive_swap_button.setVisible(can_swap)
-        self.receive_rebalance_button.setEnabled(can_rebalance and self.window.num_tasks() == 0)
-        self.receive_swap_button.setEnabled(can_swap and self.window.num_tasks() == 0)
+        # SCASH: Lightning buttons removed
         self.receive_zeroconf_button.setVisible(can_zeroconf)
         self.receive_zeroconf_button.setEnabled(can_zeroconf)
         text, data, help_text, title = self.get_tab_data()
@@ -280,9 +258,8 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
         elif self.addr:
             out = self.addr, self.addr, self.address_help, _('Address')
         else:
-            # encode lightning invoices as uppercase so QR encoding can use
-            # alphanumeric mode; resulting in smaller QR codes
-            out = self.lnaddr, self.lnaddr.upper(), self.ln_help, _('Lightning Request')
+            # SCASH: Lightning invoice path removed, fallback to empty
+            out = '', '', '', _('Request')
         return out
 
     def update_receive_qr_window(self):
@@ -291,19 +268,23 @@ class ReceiveTab(QWidget, MessageBoxMixin, Logger):
             self.window.qr_window.qrw.setData(data)
 
     def create_invoice(self, is_lightning: bool):
+        # SCASH: Lightning invoices disabled
+        if is_lightning:
+            self.show_error(_('Lightning not supported for SCASH'))
+            return
+            
         amount_sat = self.receive_amount_e.get_amount()
         message = self.receive_message_e.text()
         expiry = self.config.WALLET_PAYREQ_EXPIRY_SECONDS
-        if is_lightning:
-            address = None
-        else:
-            if amount_sat and amount_sat < self.wallet.dust_threshold():
-                self.show_error(_('Amount too small to be received onchain'))
-                return
-            address = self.get_bitcoin_address_for_request(amount_sat)
-            if not address:
-                return
-            self.window.address_list.update()
+        
+        if amount_sat and amount_sat < self.wallet.dust_threshold():
+            self.show_error(_('Amount too small to be received onchain'))
+            return
+        address = self.get_bitcoin_address_for_request(amount_sat)
+        if not address or not address.strip():
+            self.show_error(_('Could not generate a valid receiving address'))
+            return
+        self.window.address_list.update()
 
         # generate even if we cannot receive
         try:

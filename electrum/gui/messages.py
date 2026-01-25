@@ -30,8 +30,8 @@ MSG_THIRD_PARTY_PLUGIN_WARNING = ' '.join([
     _('Installing this plugin will grant third-party software access to your wallet. You must trust the plugin not to be malicious.'),
     _('You should at minimum check who the author of the plugin is, and be careful of imposters.'),
     '<br/><br/>',
-    _('Third-party plugins are not endorsed by Electrum.'),
-    _('Electrum will not be responsible in case of theft, loss of funds or privacy that might result from third-party plugins.'),
+    _('Third-party plugins are not endorsed by Electrum-Scash.'),
+    _('Electrum-Scash will not be responsible in case of theft, loss of funds or privacy that might result from third-party plugins.'),
     '<br/><br/>',
     _('To install this plugin, please enter your plugin authorization password') + ':'
 ])
@@ -59,8 +59,8 @@ MSG_NON_TRAMPOLINE_CHANNEL_FROZEN_WITHOUT_GOSSIP = _(
 If you want to keep using this channel, you need to disable trampoline routing in your preferences."""
 )
 
-MSG_FREEZE_ADDRESS = _("When you freeze an address, the funds in that address will not be used for sending bitcoins.")
-MSG_FREEZE_COIN = _("When you freeze a coin, it will not be used for sending bitcoins.")
+MSG_FREEZE_ADDRESS = _("When you freeze an address, the funds in that address will not be used for sending scash.")
+MSG_FREEZE_COIN = _("When you freeze a coin, it will not be used for sending scash.")
 
 MSG_FORWARD_SWAP_FUNDING_MEMPOOL = (
     _('Your funding transaction has been broadcast.') + " " +
@@ -102,11 +102,14 @@ MSG_LN_UTXO_RESERVE = (
 
 # not to be translated
 MSG_TERMS_OF_USE = (
-"""1. Electrum is distributed under the MIT licence by Electrum Technologies GmbH. Most notably, this means that the Electrum software is provided as is, and that it comes without warranty.
+"""1. Electrum-Scash is a fork of Electrum (https://electrum.org), distributed under the MIT licence. 
+   The software is provided 'as is', without warranty of any kind.
 
-2. We are neither a bank nor a financial service provider. In addition, we do not store user account data, and we are not an intermediary in the interaction between our software and the Bitcoin blockchain. Therefore, we do not have the possibility to freeze funds or to undo a fraudulent transaction.
+2. Electrum-Scash is a non-custodial wallet — you alone control your seed, private keys and funds. We are neither a bank nor a financial service provider and we are not an intermediary in the interaction between our software and the Scash blockchain.
+   We do not store your data, cannot freeze funds, and cannot reverse transactions.
 
-3. We do not provide private user support. All issue resolutions are public, and take place on Github or public forums. If someone posing as 'Electrum support' proposes to help you via a private channel, this person is most likely an imposter trying to steal your bitcoins."""
+3. We do not provide private support. All assistance happens publicly via GitHub or community forums. 
+   Anyone claiming to be "Electrum-Scash support" in private messages is likely an imposter."""
 )
 TERMS_OF_USE_LATEST_VERSION : int = 1  # bump this if we want users re-prompted due to changes
 
@@ -116,27 +119,27 @@ MSG_CONNECTMODE_MANUAL = _('Manual server selection')
 MSG_CONNECTMODE_ONESERVER = _('Connect only to a single server')
 
 MSG_CONNECTMODE_SERVER_HELP = _(
-    "Electrum connects to a unique server in order to receive your transaction history. "
+    "Electrum-Scash connects to a unique server in order to receive your transaction history. "
     "This server will learn your wallet addresses."
 )
 MSG_CONNECTMODE_NODES_HELP = _(
-    "In addition to your history server, Electrum will try to maintain connections with ~10 extra servers, in order to download block headers and find out the longest blockchain. "
+    "In addition to your history server, Electrum-Scash will try to maintain connections with ~10 extra servers, in order to download block headers and find out the longest blockchain. "
     "These servers are only used for block header notifications and fee estimates; they do not learn your wallet addresses. "
     "Getting block headers from multiple sources is useful to detect lagging servers and forks. "
     "Fork detection is security-critical for determining number of confirmations."
 )
 
 MSG_CONNECTMODE_AUTOCONNECT_HELP = _(
-    "Electrum will always use a history server that is on the longest blockchain. "
-    "If your current server is unresponsive or lagging, Electrum will switch to another server."
+    "Electrum-Scash will always use a history server that is on the longest blockchain. "
+    "If your current server is unresponsive or lagging, Electrum-Scash will switch to another server."
 )
 
 MSG_CONNECTMODE_MANUAL_HELP = _(
-    "Electrum will stay with the server you selected. It will warn you if your server is lagging."
+    "Electrum-Scash will stay with the server you selected. It will warn you if your server is lagging."
 )
 
 MSG_CONNECTMODE_ONESERVER_HELP = _(
-    "Electrum will stay with the server you selected, and it will not connect to additional nodes. "
+    "Electrum-Scash will stay with the server you selected, and it will not connect to additional nodes. "
     "This will disable fork detection. "
     "This mode is only intended for connecting to your own fully trusted server. "
     "Using this option on a public server is a security risk and is discouraged."

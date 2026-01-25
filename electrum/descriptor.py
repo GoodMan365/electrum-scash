@@ -1,5 +1,6 @@
 # Copyright (c) 2017 Andrew Chow
 # Copyright (c) 2023 The Electrum developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 #

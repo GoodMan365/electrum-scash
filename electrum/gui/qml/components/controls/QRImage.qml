@@ -34,7 +34,7 @@ Item {
 
             Image {
                 visible: _qrprops.valid
-                source: '../../../icons/electrum.png'
+                source: '../../../icons/electrum-scash-128.png'
                 x: 1
                 y: 1
                 width: parent.width - 2

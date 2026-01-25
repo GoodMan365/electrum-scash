@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -12,8 +12,6 @@ Pane {
     objectName: 'WalletDetails'
 
     padding: 0
-
-    property bool _is2fa: Daemon.currentWallet && Daemon.currentWallet.walletType == '2fa'
 
     function enableLightning() {
         var dialog = app.messageDialog.createObject(rootItem, {
@@ -233,78 +231,7 @@ Pane {
                             }
                         }
 
-                        Label {
-                            visible: _is2fa
-                            text: qsTr('2FA')
-                            color: Material.accentColor
-                        }
-
-                        Label {
-                            Layout.fillWidth: true
-                            visible: _is2fa
-                            text: Daemon.currentWallet.canSignWithoutServer
-                                    ? qsTr('disabled (can sign without server)')
-                                    : qsTr('enabled')
-                        }
-
-                        Label {
-                            visible: _is2fa && !Daemon.currentWallet.canSignWithoutServer
-                            text: qsTr('Remaining TX')
-                            color: Material.accentColor
-                        }
-
-                        Label {
-                            Layout.fillWidth: true
-                            visible: _is2fa && !Daemon.currentWallet.canSignWithoutServer
-                            text: 'tx_remaining' in Daemon.currentWallet.billingInfo
-                                    ? Daemon.currentWallet.billingInfo['tx_remaining']
-                                    : qsTr('unknown')
-                        }
-
-                        Label {
-                            Layout.columnSpan: 2
-                            Layout.topMargin: constants.paddingSmall
-                            visible: _is2fa && !Daemon.currentWallet.canSignWithoutServer
-                            text: qsTr('Billing')
-                            color: Material.accentColor
-                        }
-
-                        TextHighlightPane {
-                            Layout.columnSpan: 2
-                            Layout.fillWidth: true
-                            visible: _is2fa && !Daemon.currentWallet.canSignWithoutServer
-
-                            ColumnLayout {
-                                spacing: 0
-
-                                ButtonGroup {
-                                    id: billinggroup
-                                    onCheckedButtonChanged: {
-                                        Config.trustedcoinPrepay = checkedButton.value
-                                    }
-                                }
-
-                                Repeater {
-                                    model: AppController.plugin('trustedcoin').billingModel
-                                    delegate: RowLayout {
-                                        RadioButton {
-                                            ButtonGroup.group: billinggroup
-                                            property string value: modelData.value
-                                            text: modelData.text
-                                            checked: modelData.value == Config.trustedcoinPrepay
-                                        }
-                                        Label {
-                                            text: Config.formatSats(modelData.sats_per_tx)
-                                            font.family: FixedFont
-                                        }
-                                        Label {
-                                            text: Config.baseUnit + '/tx'
-                                            color: Material.accentColor
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        
 
                         Repeater {
                             id: keystores

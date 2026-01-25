@@ -1,7 +1,7 @@
 #!/bin/bash
 
-NAME_ROOT=electrum
-PROJECT_ROOT="$WINEPREFIX/drive_c/electrum"
+NAME_ROOT=electrum-scash
+PROJECT_ROOT="$WINEPREFIX/drive_c/electrum-scash"
 
 export PYTHONDONTWRITEBYTECODE=1  # don't create __pycache__/ folders with .pyc files
 
@@ -62,7 +62,8 @@ rm -rf dist/
 
 # build standalone and portable versions
 info "Running pyinstaller..."
-ELECTRUM_CMDLINE_NAME="$NAME_ROOT-$VERSION" wine "$WINE_PYHOME/scripts/pyinstaller.exe" --noconfirm --clean pyinstaller.spec
+#ELECTRUM_CMDLINE_NAME="$NAME_ROOT-$VERSION" wine "$WINE_PYHOME/scripts/pyinstaller.exe" --noconfirm --clean electrum-scash.spec
+ELECTRUM_CMDLINE_NAME="electrum-scash" wine "$WINE_PYHOME/scripts/pyinstaller.exe" --noconfirm --clean electrum-scash.spec
 
 # set timestamps in dist, in order to make the installer reproducible
 pushd dist
@@ -71,10 +72,10 @@ popd
 
 info "building NSIS installer"
 # $VERSION could be passed to the electrum.nsi script, but this would require some rewriting in the script itself.
-makensis -DPRODUCT_VERSION=$VERSION electrum.nsi
+makensis -DPRODUCT_VERSION=$VERSION electrum-scash.nsi
 
 cd dist
-mv electrum-setup.exe $NAME_ROOT-$VERSION-setup.exe
+#mv electrum-scash-setup.exe $NAME_ROOT-$VERSION-setup.exe
 cd ..
 
 info "Padding binaries to 8-byte boundaries, and fixing COFF image checksum in PE header"

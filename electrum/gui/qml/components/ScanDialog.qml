@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-import org.electrum
+import org.electrumscash
 
 import "controls"
 

@@ -6,7 +6,7 @@ import QtQuick.Controls.Material
 Pane {
     objectName: 'About'
 
-    property string title: qsTr("About Electrum")
+    property string title: qsTr("About Electrum-Scash")
 
     Flickable {
         anchors.fill: parent
@@ -72,16 +72,16 @@ Pane {
                 Layout.alignment: Qt.AlignRight
             }
             Label {
-                text: qsTr('<a href="https://electrum.org">https://electrum.org</a>')
+                text: qsTr('<a href="https://github.com/GoodMan365/electrum-scash">Electrum-Scash</a>')
                 textFormat: Text.RichText
                 onLinkActivated: Qt.openUrlExternally(link)
             }
             Label {
-                text: qsTr('Developers')
+                text: qsTr('Maintainers')
                 Layout.alignment: Qt.AlignRight
             }
             Label {
-                text: 'Thomas Voegtlin\nSomberNight\nSander van Grieken'
+                text: 'GoodMan365'
             }
             Item {
                 width: 1
@@ -89,7 +89,7 @@ Pane {
                 Layout.columnSpan: 2
             }
             Label {
-                text: qsTr('Distributed by Electrum Technologies GmbH')
+                text: qsTr('Distributed by Electrum-Scash')
                 Layout.columnSpan: 2
                 Layout.alignment: Qt.AlignHCenter
             }

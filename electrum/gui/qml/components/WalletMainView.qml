@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Material
 import QtQml
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -43,21 +43,17 @@ Item {
 
         // Android based send dialog if on android
         var scanner = app.scanDialog.createObject(mainView, {
-            hint: Daemon.currentWallet.isLightning
-                ? qsTr('Scan an Invoice, an Address, an LNURL, a PSBT or a Channel Backup')
-                : qsTr('Scan an Invoice, an Address, an LNURL or a PSBT')
+            hint: qsTr('Scan an Invoice, an Address, an LNURL or a PSBT')  // Removed Lightning channel backup from hint
         })
         scanner.onFoundText.connect(function(data) {
             data = data.trim()
             if (bitcoin.isRawTx(data)) {
                 app.stack.push(Qt.resolvedUrl('TxDetails.qml'), { rawtx: data })
             } else if (Daemon.currentWallet.isValidChannelBackup(data)) {
+                // Channel backup functionality removed for SCash
                 var dialog = app.messageDialog.createObject(app, {
-                    title: qsTr('Import Channel Backup?'),
-                    yesno: true
-                })
-                dialog.accepted.connect(function() {
-                    Daemon.currentWallet.importChannelBackup(data)
+                    title: qsTr('Cannot import Channel Backup, Lightning not enabled.'),
+                    text: qsTr('Lightning Network is not supported in SCash.')
                 })
                 dialog.open()
             } else {
@@ -132,8 +128,9 @@ Item {
     }
 
     function createRequest(lightning, reuse_address) {
+        // Lightning parameter is ignored for SCash
         var qamt = Config.unitsToSats(_request_amount)
-        Daemon.currentWallet.createRequest(qamt, _request_description, _request_expiry, lightning, reuse_address)
+        Daemon.currentWallet.createRequest(qamt, _request_description, _request_expiry, false, reuse_address)  // Always false for lightning
     }
 
     function startSweep() {
@@ -201,15 +198,16 @@ Item {
                 enabled: Daemon.currentWallet && app.stack.currentItem.objectName != 'Addresses'
             }
         }
-        MenuItem {
-            icon.color: action.enabled ? 'transparent' : Material.iconDisabledColor
-            icon.source: '../../icons/lightning.png'
-            action: Action {
-                text: qsTr('Channels');
-                enabled: Daemon.currentWallet && Daemon.currentWallet.isLightning && app.stack.currentItem.objectName != 'Channels'
-                onTriggered: menu.openPage(Qt.resolvedUrl('Channels.qml'))
-            }
-        }
+       // MenuItem {
+       //     visible: false  // Hidden for SCash
+       //     icon.color: action.enabled ? 'transparent' : Material.iconDisabledColor
+       //     icon.source: '../../icons/lightning.png'
+       //     action: Action {
+       //         text: qsTr('Channels');
+       //         enabled: false  // Disabled for SCash
+       //         onTriggered: {}  // Empty handler
+       //     }
+       // }
 
         MenuItem {
             icon.color: action.enabled ? 'transparent' : Material.iconDisabledColor
@@ -436,15 +434,14 @@ Item {
         }
         onValidationWarning: (code, message) => {
             if (code == 'no_channels') {
+                // Lightning warning - can be ignored for SCash
                 var dialog = app.messageDialog.createObject(app, {
-                    text: message
+                    text: qsTr('Lightning Network is not supported in SCash.')
                 })
                 dialog.closed.connect(function() {
                     restartSendDialog()
                 })
                 dialog.open()
-                // TODO: ask user to open a channel, if funds allow
-                // and maybe store invoice if expiry allows
             }
         }
         onValidationSuccess: {
@@ -548,33 +545,17 @@ Item {
             dialog.open()
         }
         function onImportChannelBackupFailed(message) {
+            // Lightning functionality - ignore for SCash
             var dialog = app.messageDialog.createObject(app, {
-                title: qsTr('Error'),
+                title: qsTr('Lightning Not Supported'),
                 iconSource: Qt.resolvedUrl('../../icons/warning.png'),
-                text: message
+                text: qsTr('Lightning Network is not supported in SCash.')
             })
             dialog.open()
         }
         function onBalanceChanged() {
-            // ln low reserve warning
-            if (Daemon.currentWallet.isLowReserve) {
-                var message = [
-                    qsTr('You do not have enough on-chain funds to protect your Lightning channels.'),
-                    qsTr('You should have at least %1 on-chain in order to be able to sweep channel outputs.').arg(Config.formatSats(Config.lnUtxoReserve) + ' ' + Config.baseUnit)
-                ].join(' ')
-                infobanner.show(message, function() {
-                    var dialog = app.messageDialog.createObject(app, {
-                        text: message + '\n\n' + qsTr('Do you want to perform a swap?'),
-                        yesno: true
-                    })
-                    dialog.accepted.connect(function() {
-                        app.startSwap()
-                    })
-                    dialog.open()
-                })
-            } else {
-                infobanner.hide()
-            }
+            // Lightning low reserve warning - removed for SCash
+            // No Lightning balance warnings needed for SCash
         }
     }
 
@@ -587,32 +568,16 @@ Item {
             height: parent.height
 
             onDoPay: {
-                var lninvoiceButPayOnchain = false
-                if (invoice.invoiceType == Invoice.LightningInvoice && invoice.address) {
-                    // ln invoice with fallback
-                    var amountToSend = invoice.amountOverride.isEmpty
-                        ? invoice.amount.satsInt
-                        : invoice.amountOverride.satsInt
-                    if (amountToSend > Daemon.currentWallet.lightningCanSend.satsInt) {
-                        lninvoiceButPayOnchain = true
-                    }
-                }
+                // For SCash, only handle on-chain invoices
                 if (invoice.invoiceType == Invoice.OnchainInvoice) {
                     payOnchain(_invoiceDialog, invoice)
                 } else if (invoice.invoiceType == Invoice.LightningInvoice) {
-                    if (lninvoiceButPayOnchain) {
-                        var dialog = app.messageDialog.createObject(mainView, {
-                            title: qsTr('Insufficient balance to pay over Lightning. Pay on-chain instead?'),
-                            yesno: true
-                        })
-                        dialog.accepted.connect(function() {
-                            payOnchain(_invoiceDialog, invoice)
-                        })
-                        dialog.open()
-                    } else {
-                        console.log('About to pay lightning invoice')
-                        invoice.payLightningInvoice()
-                    }
+                    // Lightning invoice - show error for SCash
+                    var dialog = app.messageDialog.createObject(mainView, {
+                        title: qsTr('Lightning Not Supported'),
+                        text: qsTr('Lightning Network invoices are not supported in SCash.')
+                    })
+                    dialog.open()
                 }
             }
 
@@ -638,24 +603,10 @@ Item {
                 close()
             }
             onChannelBackupFound: (data) => {
-                if (!Daemon.currentWallet.isLightning) {
-                    var dialog = app.messageDialog.createObject(app, {
-                        title: qsTr('Cannot import Channel Backup, Lightning not enabled.')
-                    })
-                    dialog.open()
-                    return
-                }
-
+                // Channel backup functionality removed for SCash
                 var dialog = app.messageDialog.createObject(app, {
-                    title: qsTr('Import Channel Backup?'),
-                    yesno: true
-                })
-                dialog.accepted.connect(function() {
-                    Daemon.currentWallet.importChannelBackup(data)
-                    close()
-                })
-                dialog.rejected.connect(function() {
-                    close()
+                    title: qsTr('Cannot import Channel Backup'),
+                    text: qsTr('Lightning Network is not supported in SCash.')
                 })
                 dialog.open()
             }
@@ -675,7 +626,7 @@ Item {
                 _request_amount = _receiveDetailsDialog.amount
                 _request_description = _receiveDetailsDialog.description
                 _request_expiry = _receiveDetailsDialog.expiry
-                createRequest(_receiveDetailsDialog.isLightning, false)
+                createRequest(false, false)  // Always false for lightning parameter
             }
             onRejected: {
                 console.log('rejected')
@@ -693,21 +644,13 @@ Item {
             onRequestPaid: {
                 close()
                 var capturedHistoryModel = Daemon.currentWallet.historyModel
-                if (isLightning) {
-                    var page = app.stack.push(Qt.resolvedUrl('LightningPaymentDetails.qml'), {'key': key})
-                    var capturedKey = key
-                    page.detailsChanged.connect(function() {
-                            capturedHistoryModel.updateTxLabel(capturedKey, page.label)
-                        }
-                    )
-                } else {
-                    let paidTxid = getPaidTxid()
-                    var page = app.stack.push(Qt.resolvedUrl('TxDetails.qml'), {'txid': paidTxid})
-                    page.detailsChanged.connect(function() {
-                            capturedHistoryModel.updateTxLabel(paidTxid, page.label)
-                        }
-                    )
-                }
+                // For SCash, only handle on-chain payments
+                let paidTxid = getPaidTxid()
+                var page = app.stack.push(Qt.resolvedUrl('TxDetails.qml'), {'txid': paidTxid})
+                page.detailsChanged.connect(function() {
+                        capturedHistoryModel.updateTxLabel(paidTxid, page.label)
+                    }
+                )
             }
             onClosed: destroy()
         }
@@ -820,4 +763,3 @@ Item {
     }
 
 }
-

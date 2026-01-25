@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2012 thomasv@gitorious
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -61,9 +62,9 @@ class NetworkDialog(QDialog, QtEventListener):
         self.tabs = tabs = QTabWidget()
         self._blockchain_tab = ServerWidget(network)
         self._proxy_tab = ProxyWidget(network)
-        self._nostr_tab = NostrWidget(network)
+        #self._nostr_tab = NostrWidget(network)
         tabs.addTab(self._blockchain_tab, _('Server'))
-        tabs.addTab(self._nostr_tab, _('Nostr'))
+        #tabs.addTab(self._nostr_tab, _('Nostr'))
         tabs.addTab(self._proxy_tab, _('Proxy'))
         vbox = QVBoxLayout(self)
         vbox.addWidget(self.tabs)
@@ -585,58 +586,58 @@ class ServerWidget(QWidget, QtEventListener):
         self.network.run_from_another_thread(self.network.set_parameters(new_net_params))
 
 
-class NostrWidget(QWidget, QtEventListener):
+# class NostrWidget(QWidget, QtEventListener):
 
-    def __init__(self, network: Network, parent=None):
-        super().__init__(parent)
-        self.network = network
-        self.config = network.config
-        vbox = QVBoxLayout()
-        self.setLayout(vbox)
-        grid = QGridLayout()
-        nostr_relays_label = QLabel(self.config.cv.NOSTR_RELAYS.get_short_desc())
-        nostr_helpbutton = HelpButton(self.config.cv.NOSTR_RELAYS.get_long_desc())
-        grid.addWidget(nostr_relays_label, 0, 0)
-        grid.addWidget(nostr_helpbutton, 0, 1)
-        vbox.addLayout(grid)
+    # def __init__(self, network: Network, parent=None):
+        # super().__init__(parent)
+        # self.network = network
+        # self.config = network.config
+        # vbox = QVBoxLayout()
+        # self.setLayout(vbox)
+        # grid = QGridLayout()
+        # nostr_relays_label = QLabel(self.config.cv.NOSTR_RELAYS.get_short_desc())
+        # nostr_helpbutton = HelpButton(self.config.cv.NOSTR_RELAYS.get_long_desc())
+        # grid.addWidget(nostr_relays_label, 0, 0)
+        # grid.addWidget(nostr_helpbutton, 0, 1)
+        # vbox.addLayout(grid)
 
-        self.relays_list = QListWidget()
-        self.relay_edit = QLineEdit()
-        self.relay_edit.textChanged.connect(self.on_relay_edited)
-        vbox.addWidget(self.relays_list)
-        vbox.addStretch()
-        self.add_button = QPushButton(_('Add'))
-        self.add_button.clicked.connect(self.add_relay)
-        self.add_button.setEnabled(False)
-        remove_button = QPushButton(_('Remove'))
-        remove_button.clicked.connect(self.remove_relay)
-        reset_button = QPushButton(_('Reset'))
-        reset_button.clicked.connect(self.reset_relays)
-        buttons = Buttons(self.relay_edit, self.add_button, remove_button, reset_button)
-        vbox.addLayout(buttons)
-        self.update_list()
+        # self.relays_list = QListWidget()
+        # self.relay_edit = QLineEdit()
+        # self.relay_edit.textChanged.connect(self.on_relay_edited)
+        # vbox.addWidget(self.relays_list)
+        # vbox.addStretch()
+        # self.add_button = QPushButton(_('Add'))
+        # self.add_button.clicked.connect(self.add_relay)
+        # self.add_button.setEnabled(False)
+        # remove_button = QPushButton(_('Remove'))
+        # remove_button.clicked.connect(self.remove_relay)
+        # reset_button = QPushButton(_('Reset'))
+        # reset_button.clicked.connect(self.reset_relays)
+        # buttons = Buttons(self.relay_edit, self.add_button, remove_button, reset_button)
+        # vbox.addLayout(buttons)
+        # self.update_list()
 
-    def on_relay_edited(self, text):
-        self.add_button.setEnabled(is_valid_websocket_url(text))
+    # def on_relay_edited(self, text):
+        # self.add_button.setEnabled(is_valid_websocket_url(text))
 
-    def update_list(self):
-        self.relays_list.clear()
-        for relay in self.config.get_nostr_relays():
-            item = QListWidgetItem(relay)
-            self.relays_list.addItem(item)
+    # def update_list(self):
+        # self.relays_list.clear()
+        # for relay in self.config.get_nostr_relays():
+            # item = QListWidgetItem(relay)
+            # self.relays_list.addItem(item)
 
-    def add_relay(self):
-        relay = self.relay_edit.text()
-        self.config.add_nostr_relay(relay)
-        self.update_list()
+    # def add_relay(self):
+        # relay = self.relay_edit.text()
+        # self.config.add_nostr_relay(relay)
+        # self.update_list()
 
-    def remove_relay(self):
-        item = self.relays_list.currentItem()
-        if item is None:
-            return
-        self.config.remove_nostr_relay(item.text())
-        self.update_list()
+    # def remove_relay(self):
+        # item = self.relays_list.currentItem()
+        # if item is None:
+            # return
+        # self.config.remove_nostr_relay(item.text())
+        # self.update_list()
 
-    def reset_relays(self):
-        self.config.NOSTR_RELAYS = None
-        self.update_list()
+    # def reset_relays(self):
+        # self.config.NOSTR_RELAYS = None
+        # self.update_list()

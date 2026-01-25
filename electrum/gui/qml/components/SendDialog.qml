@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -31,15 +31,18 @@ ElDialog {
     }
 
     function dispatch(data) {
-        data = data.trim()
-        if (bitcoin.isRawTx(data)) {
-            txFound(data)
-        } else if (Daemon.currentWallet.isValidChannelBackup(data)) {
-            channelBackupFound(data)
-        } else {
-            piResolver.recipient = data
-        }
-    }
+		data = data.trim()
+		if (bitcoin.isRawTx(data)) {
+			txFound(data)
+		}
+		else if (Daemon.currentWallet.canHaveLightning && Daemon.currentWallet.isValidChannelBackup(data)) {
+			channelBackupFound(data)
+		}
+		else {
+			// For non-LN wallets, treat everything as an address or PSBT
+			piResolver.recipient = data
+		}
+	}
 
     // override
     function doClose() {
@@ -52,19 +55,19 @@ ElDialog {
         anchors.fill: parent
         spacing: 0
 
-        QRScan {
-            id: qrscan
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+		QRScan {
+			id: qrscan
+			Layout.fillWidth: true
+			Layout.fillHeight: true
 
-            hint: Daemon.currentWallet.isLightning
-                ? qsTr('Scan an Invoice, an Address, an LNURL, a PSBT or a Channel Backup')
-                : qsTr('Scan an Invoice, an Address, an LNURL or a PSBT')
+			hint: Daemon.currentWallet.canHaveLightning
+				? qsTr('Scan an Invoice, an Address, an LNURL, a PSBT or a Channel Backup')
+				: qsTr('Scan an Address or a PSBT')
 
-            onFoundText: (data) => {
-                dialog.dispatch(data)
-            }
-        }
+			onFoundText: (data) => {
+				dialog.dispatch(data)
+			}
+		}
 
         ButtonContainer {
             Layout.fillWidth: true

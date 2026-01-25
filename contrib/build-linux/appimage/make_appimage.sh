@@ -7,7 +7,7 @@ CONTRIB="$PROJECT_ROOT/contrib"
 CONTRIB_APPIMAGE="$CONTRIB/build-linux/appimage"
 DISTDIR="$PROJECT_ROOT/dist"
 BUILDDIR="$CONTRIB_APPIMAGE/build/appimage"
-APPDIR="$BUILDDIR/electrum.AppDir"
+APPDIR="$BUILDDIR/electrum-scash.AppDir"
 CACHEDIR="$CONTRIB_APPIMAGE/.cache/appimage"
 TYPE2_RUNTIME_REPO_DIR="$CACHEDIR/type2-runtime"
 export DLL_TARGET_DIR="$CACHEDIR/dlls"
@@ -25,7 +25,7 @@ PY_VER_MAJOR="3.12"  # as it appears in fs paths
 PKG2APPIMAGE_COMMIT="a9c85b7e61a3a883f4a35c41c5decb5af88b6b5d"
 
 VERSION=$(git describe --tags --dirty --always)
-APPIMAGE="$DISTDIR/electrum-$VERSION-x86_64.AppImage"
+APPIMAGE="$DISTDIR/electrum-scash-$VERSION-x86_64.AppImage"
 
 rm -rf "$BUILDDIR"
 mkdir -p "$APPDIR" "$CACHEDIR" "$PIP_CACHE_DIR" "$DISTDIR" "$DLL_TARGET_DIR"
@@ -159,8 +159,8 @@ info "installing electrum and its dependencies."
 
 
 info "desktop integration."
-cp "$PROJECT_ROOT/electrum.desktop" "$APPDIR/electrum.desktop"
-cp "$PROJECT_ROOT/electrum/gui/icons/electrum.png" "$APPDIR/electrum.png"
+cp "$PROJECT_ROOT/electrum-scash.desktop" "$APPDIR/electrum-scash.desktop"
+cp "$PROJECT_ROOT/electrum/gui/icons/electrum-scash.png" "$APPDIR/electrum-scash.png"
 
 
 # add launcher

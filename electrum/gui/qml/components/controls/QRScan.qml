@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtMultimedia
 import QtQml
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 Item {
     id: scanner

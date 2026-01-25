@@ -229,7 +229,28 @@ class _CustomLogger(logging.getLoggerClass()):
         super().__init__(name, *args, **kwargs)
         self.msg_hashes_seen = set()  # type: Set[bytes]
         # ^ note: size grows without bounds, but only for log lines using "only_once".
-
+        # Define Unicode replacements for Windows
+        self._unicode_replacements = {
+            '✓': '[OK]',
+            '✗': '[ERROR]',
+            '⚠': '[WARNING]',
+            '…': '...',
+            '→': '->',
+            '—': '--',
+            '–': '-',
+            '“': '"',
+            '”': '"',
+            '‘': "'",
+            '’': "'",
+        }
+    
+    def _make_msg_windows_safe(self, msg: str) -> str:
+        """Replace Unicode characters for Windows console compatibility"""
+        if sys.platform == 'win32' and isinstance(msg, str):
+            for unicode_char, ascii_repl in self._unicode_replacements.items():
+                msg = msg.replace(unicode_char, ascii_repl)
+        return msg
+        
     def _log(self, level, msg: str, *args, only_once: bool = False, **kwargs) -> None:
         """Overridden to add 'only_once' arg to logger.debug()/logger.info()/logger.warning()/etc."""
         if only_once:  # if set, this logger will only log this msg a single time during its lifecycle
@@ -237,6 +258,9 @@ class _CustomLogger(logging.getLoggerClass()):
             if msg_hash in self.msg_hashes_seen:
                 return
             self.msg_hashes_seen.add(msg_hash)
+        # Windows-specific Unicode fix - apply BEFORE calling super()
+        msg = self._make_msg_windows_safe(msg)
+        
         super()._log(level, msg, *args, **kwargs)
 
 logging.setLoggerClass(_CustomLogger)

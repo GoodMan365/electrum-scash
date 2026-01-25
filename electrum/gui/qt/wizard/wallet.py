@@ -391,7 +391,6 @@ class WCWalletType(WalletWizardComponent):
         message = _('What kind of wallet do you want to create?')
         wallet_kinds = [
             ChoiceItem(key='standard', label=_('Standard wallet')),
-            ChoiceItem(key='2fa', label=_('Wallet with two-factor authentication')),
             ChoiceItem(key='multisig', label=_('Multi-signature wallet')),
             ChoiceItem(key='imported', label=_('Import Bitcoin addresses or private keys')),
         ]
@@ -452,8 +451,6 @@ class WCCreateSeed(WalletWizardComponent):
         self.seed = None
 
     def on_ready(self):
-        if self.wizard_data['wallet_type'] == '2fa':
-            self.seed_type = '2fa_segwit'
         QTimer.singleShot(1, self.create_seed)
 
     def apply(self):
@@ -591,11 +588,8 @@ class WCHaveSeed(WalletWizardComponent, Logger):
 
     def on_ready(self):
         options = ['ext', 'electrum', 'bip39', 'slip39']
-        if self.wizard_data['wallet_type'] == '2fa':
-            options = ['ext', 'electrum']
-        else:
-            if self.params and 'seed_options' in self.params:
-                options = self.params['seed_options']
+        if self.params and 'seed_options' in self.params:
+            options = self.params['seed_options']
 
         self.seed_widget = SeedWidget(
             is_seed=self.is_seed,
@@ -621,11 +615,9 @@ class WCHaveSeed(WalletWizardComponent, Logger):
         # really only used for electrum seeds. bip39 and slip39 are validated in SeedWidget
         t = mnemonic.calc_seed_type(x)
         if self.wizard_data['wallet_type'] == 'standard':
-            return mnemonic.is_seed(x) and not mnemonic.is_any_2fa_seed_type(t)
-        elif self.wizard_data['wallet_type'] == '2fa':
-            return mnemonic.is_any_2fa_seed_type(t)
+            return mnemonic.is_seed(x)
         else:
-            # multisig?  by default, only accept modern non-2fa electrum seeds
+            # Multisig
             return t in ['standard', 'segwit']
 
     def validate(self):

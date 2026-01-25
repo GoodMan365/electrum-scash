@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2013 ecdsa@github
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -32,7 +33,7 @@ from PyQt6.QtWidgets import (QVBoxLayout, QCheckBox, QHBoxLayout, QLineEdit,
                              QWidget, QPushButton)
 
 from electrum.i18n import _
-from electrum.mnemonic import Mnemonic, calc_seed_type, is_any_2fa_seed_type
+from electrum.mnemonic import Mnemonic, calc_seed_type
 from electrum import old_mnemonic
 from electrum import slip39
 from electrum.util import ChoiceItem
@@ -322,7 +323,7 @@ class SeedWidget(QWidget):
             t = calc_seed_type(s)
             label = _('Seed Type') + ': ' + t if t else ''
             if t and not valid:  # electrum seed, but does not conform to dialog rules
-                wiztype_fullname = _('Wallet with two-factor authentication') if is_any_2fa_seed_type(t) else _("Standard wallet")
+                wiztype_fullname = _("Standard wallet")
                 msg = ' '.join([
                     '<b>' + _('Warning') + ':</b>  ',
                     _("Looks like you have entered a valid seed of type '{}' but this dialog does not support such seeds.").format(t),

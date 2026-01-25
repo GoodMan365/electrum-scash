@@ -1,5 +1,6 @@
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2011 Thomas Voegtlin
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -90,11 +91,13 @@ def all_subclasses(cls) -> Set:
 ca_path = certifi.where()
 
 
-base_units = {'BTC':8, 'mBTC':5, 'bits':2, 'sat':0}
+#base_units = {'BTC':8, 'mBTC':5, 'bits':2, 'sat':0}
+base_units = {'SCASH':8, 'mSCASH':5, 'bits':2, 'sat':0}
 base_units_inverse = inv_dict(base_units)
-base_units_list = ['BTC', 'mBTC', 'bits', 'sat']  # list(dict) does not guarantee order
+#base_units_list = ['BTC', 'mBTC', 'bits', 'sat']  # list(dict) does not guarantee order
+base_units_list = ['SCASH', 'mSCASH', 'bits', 'sat']
 
-DECIMAL_POINT_DEFAULT = 5  # mBTC
+DECIMAL_POINT_DEFAULT = 8  # BTC now SCASH
 
 
 class UnknownBaseUnit(Exception): pass
@@ -568,6 +571,17 @@ def android_data_dir():
     PythonActivity = jnius.autoclass('org.kivy.android.PythonActivity')
     return PythonActivity.mActivity.getFilesDir().getPath() + '/data'
 
+def scash_android_data_dir():
+    """Android directory specifically for SCASH wallet."""
+    try:
+        import jnius
+        PythonActivity = jnius.autoclass('org.kivy.android.PythonActivity')
+        files_dir = PythonActivity.mActivity.getFilesDir()
+        return str(files_dir.getPath()) + '/electrum-scash'
+    except:
+        # Fallback
+        return "/data/data/org.scash.electrumscash/files/electrum-scash"
+
 
 def ensure_sparse_file(filename):
     # On modern Linux, no need to do anything.
@@ -699,23 +713,75 @@ def xor_bytes(a: bytes, b: bytes) -> bytes:
             .to_bytes(size, "big"))
 
 
+# def user_dir():
+    # if "ELECTRUMDIR" in os.environ:
+        # return os.environ["ELECTRUMDIR"]
+    # elif 'ANDROID_DATA' in os.environ:
+        # return android_data_dir()
+    # elif os.name == 'posix':
+        # return os.path.join(os.environ["HOME"], ".electrum")
+    # elif "APPDATA" in os.environ:
+        # return os.path.join(os.environ["APPDATA"], "Electrum")
+    # elif "LOCALAPPDATA" in os.environ:
+        # return os.path.join(os.environ["LOCALAPPDATA"], "Electrum")
+    # else:
+        # #raise Exception("No home directory found in environment variables.")
+        # return
+
 def user_dir():
-    if "ELECTRUMDIR" in os.environ:
+    if "ELECTRUM_SCASH_DIR" in os.environ:  # SCASH-specific env var
+        return os.environ["ELECTRUM_SCASH_DIR"]
+    elif "ELECTRUMDIR" in os.environ:  # Original fallback
         return os.environ["ELECTRUMDIR"]
     elif 'ANDROID_DATA' in os.environ:
-        return android_data_dir()
+        return scash_android_data_dir()  # Need to modify this too
     elif os.name == 'posix':
-        return os.path.join(os.environ["HOME"], ".electrum")
+        return os.path.join(os.environ["HOME"], ".electrum-scash")  # ✅ Changed
     elif "APPDATA" in os.environ:
-        return os.path.join(os.environ["APPDATA"], "Electrum")
+        return os.path.join(os.environ["APPDATA"], "Electrum-Scash")  # ✅ Changed
     elif "LOCALAPPDATA" in os.environ:
-        return os.path.join(os.environ["LOCALAPPDATA"], "Electrum")
+        return os.path.join(os.environ["LOCALAPPDATA"], "Electrum-Scash")  # ✅ Changed
     else:
         #raise Exception("No home directory found in environment variables.")
-        return
+        return ""
 
 
+# def resource_path(*parts):
+    # return os.path.join(pkg_dir, *parts)
+    
+# def resource_path(*parts):
+    # # First check for SCASH-specific resources
+    # scash_pkg_dir = pkg_dir.replace('electrum', 'electrum_scash')
+    # scash_path = os.path.join(scash_pkg_dir, *parts)
+    # if os.path.exists(scash_path):
+        # return scash_path
+    # # Fallback to original
+    # return os.path.join(pkg_dir, *parts)
+    
 def resource_path(*parts):
+    # First, check for SCASH-specific resources
+    # pkg_dir is usually something like: /path/to/electrum
+    # We need to check if SCASH resources exist in a SCASH-specific subdirectory
+    
+    # Option 1: If you placed SCASH resources in electrum/chains/scash/
+    scash_parts = list(parts)
+    if len(parts) > 0 and parts[0] == 'chains':
+        # This is a chains/... request
+        if len(parts) >= 2 and parts[1] != 'scash':
+            # Not a SCASH chain request, use original
+            return os.path.join(pkg_dir, *parts)
+        # It's a SCASH chain request, proceed normally
+    
+    # Option 2: More explicit - always check SCASH directory first
+    scash_base = pkg_dir
+    # If pkg_dir ends with 'electrum', check for 'electrum-scash' sibling
+    if pkg_dir.endswith('electrum'):
+        scash_base = pkg_dir + '-scash'
+        scash_test_path = os.path.join(scash_base, *parts)
+        if os.path.exists(scash_test_path):
+            return scash_test_path
+    
+    # Fallback to original
     return os.path.join(pkg_dir, *parts)
 
 
@@ -969,79 +1035,101 @@ def delta_time_str(distance_in_time: timedelta, *, include_seconds: bool = False
         return _("over {} years").format(round(distance_in_minutes / 525600))
 
 
+# mainnet_block_explorers = {
+    # '3xpl.com': ('https://3xpl.com/bitcoin/',
+                        # {'tx': 'transaction/', 'addr': 'address/'}),
+    # 'Bitflyer.jp': ('https://chainflyer.bitflyer.jp/',
+                        # {'tx': 'Transaction/', 'addr': 'Address/'}),
+    # 'Blockchain.info': ('https://blockchain.com/btc/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'Blockstream.info': ('https://blockstream.info/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'Bitaps.com': ('https://btc.bitaps.com/',
+                        # {'tx': '', 'addr': ''}),
+    # 'BTC.com': ('https://btc.com/',
+                        # {'tx': '', 'addr': ''}),
+    # 'Chain.so': ('https://www.chain.so/',
+                        # {'tx': 'tx/BTC/', 'addr': 'address/BTC/'}),
+    # 'Insight.is': ('https://insight.bitpay.com/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'BlockCypher.com': ('https://live.blockcypher.com/btc/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'Blockchair.com': ('https://blockchair.com/bitcoin/',
+                        # {'tx': 'transaction/', 'addr': 'address/'}),
+    # 'blockonomics.co': ('https://www.blockonomics.co/',
+                        # {'tx': 'api/tx?txid=', 'addr': '#/search?q='}),
+    # 'mempool.space': ('https://mempool.space/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'mempool.emzy.de': ('https://mempool.emzy.de/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'OXT.me': ('https://oxt.me/',
+                        # {'tx': 'transaction/', 'addr': 'address/'}),
+    # 'mynode.local': ('http://mynode.local:3002/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'system default': ('blockchain:/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+# }
+
+# testnet_block_explorers = {
+    # 'Bitaps.com': ('https://tbtc.bitaps.com/',
+                       # {'tx': '', 'addr': ''}),
+    # 'BlockCypher.com': ('https://live.blockcypher.com/btc-testnet/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'Blockchain.info': ('https://www.blockchain.com/btc-testnet/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'Blockstream.info': ('https://blockstream.info/testnet/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'mempool.space': ('https://mempool.space/testnet/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'smartbit.com.au': ('https://testnet.smartbit.com.au/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'system default': ('blockchain://000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+# }
+
+# testnet4_block_explorers = {
+    # 'mempool.space': ('https://mempool.space/testnet4/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'wakiyamap.dev': ('https://testnet4-explorer.wakiyamap.dev/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+# }
+
+# signet_block_explorers = {
+    # 'bc-2.jp': ('https://explorer.bc-2.jp/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'mempool.space': ('https://mempool.space/signet/',
+                        # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'bitcoinexplorer.org': ('https://signet.bitcoinexplorer.org/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'wakiyamap.dev': ('https://signet-explorer.wakiyamap.dev/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'ex.signet.bublina.eu.org': ('https://ex.signet.bublina.eu.org/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+    # 'system default': ('blockchain:/',
+                       # {'tx': 'tx/', 'addr': 'address/'}),
+# }
+
 mainnet_block_explorers = {
-    '3xpl.com': ('https://3xpl.com/bitcoin/',
-                        {'tx': 'transaction/', 'addr': 'address/'}),
-    'Bitflyer.jp': ('https://chainflyer.bitflyer.jp/',
-                        {'tx': 'Transaction/', 'addr': 'Address/'}),
-    'Blockchain.info': ('https://blockchain.com/btc/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'Blockstream.info': ('https://blockstream.info/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'Bitaps.com': ('https://btc.bitaps.com/',
-                        {'tx': '', 'addr': ''}),
-    'BTC.com': ('https://btc.com/',
-                        {'tx': '', 'addr': ''}),
-    'Chain.so': ('https://www.chain.so/',
-                        {'tx': 'tx/BTC/', 'addr': 'address/BTC/'}),
-    'Insight.is': ('https://insight.bitpay.com/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'BlockCypher.com': ('https://live.blockcypher.com/btc/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'Blockchair.com': ('https://blockchair.com/bitcoin/',
-                        {'tx': 'transaction/', 'addr': 'address/'}),
-    'blockonomics.co': ('https://www.blockonomics.co/',
-                        {'tx': 'api/tx?txid=', 'addr': '#/search?q='}),
-    'mempool.space': ('https://mempool.space/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'mempool.emzy.de': ('https://mempool.emzy.de/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'OXT.me': ('https://oxt.me/',
-                        {'tx': 'transaction/', 'addr': 'address/'}),
-    'mynode.local': ('http://mynode.local:3002/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'system default': ('blockchain:/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
+    'SCASH.TV': ('https://scash.tv/',
+                {'tx': 'tx/', 'addr': 'address/'}),
+    
+    'SCASH Network': ('https://explorer.scash.network/',
+                    {'tx': 'tx/', 'addr': 'address/'}),
+    
+    'Custom URL': ('',
+                  {'tx': '', 'addr': ''}),
 }
 
+# Since SCASH probably doesn't have testnet4/signet, empty those:
 testnet_block_explorers = {
-    'Bitaps.com': ('https://tbtc.bitaps.com/',
-                       {'tx': '', 'addr': ''}),
-    'BlockCypher.com': ('https://live.blockcypher.com/btc-testnet/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'Blockchain.info': ('https://www.blockchain.com/btc-testnet/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'Blockstream.info': ('https://blockstream.info/testnet/',
+    'SCASH.TV Testnet': ('https://scash.tv/',  # or specific testnet URL if exists
                         {'tx': 'tx/', 'addr': 'address/'}),
-    'mempool.space': ('https://mempool.space/testnet/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'smartbit.com.au': ('https://testnet.smartbit.com.au/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'system default': ('blockchain://000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
+    'Custom URL': ('',
+                  {'tx': '', 'addr': ''}),
 }
 
-testnet4_block_explorers = {
-    'mempool.space': ('https://mempool.space/testnet4/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'wakiyamap.dev': ('https://testnet4-explorer.wakiyamap.dev/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-}
-
-signet_block_explorers = {
-    'bc-2.jp': ('https://explorer.bc-2.jp/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'mempool.space': ('https://mempool.space/signet/',
-                        {'tx': 'tx/', 'addr': 'address/'}),
-    'bitcoinexplorer.org': ('https://signet.bitcoinexplorer.org/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'wakiyamap.dev': ('https://signet-explorer.wakiyamap.dev/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'ex.signet.bublina.eu.org': ('https://ex.signet.bublina.eu.org/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-    'system default': ('blockchain:/',
-                       {'tx': 'tx/', 'addr': 'address/'}),
-}
+testnet4_block_explorers = {}
+signet_block_explorers = {}
 
 _block_explorer_default_api_loc = {'tx': 'tx/', 'addr': 'address/'}
 

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2018 The Electrum developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -24,12 +25,39 @@
 # SOFTWARE.
 
 import os
+import sys
+import time
+import threading
 import json
 from typing import Sequence, Tuple, Mapping, Type, List, Optional
+import asyncio
+import aiohttp
 
-from .lntransport import LNPeerAddr
+
+
+## from .lntransport import LNPeerAddr  # Lightning not supported for Scash
+class LNPeerAddr:
+    def __init__(self, *args, **kwargs):
+        pass
+    @classmethod
+    def from_str(cls, s):
+        raise NotImplementedError("Lightning not supported for Scash")
 from .util import inv_dict, all_subclasses, classproperty
 from . import bitcoin
+
+class LNPeerAddr:
+    """Dummy class for Scash (Lightning not supported)."""
+    def __init__(self, host=None, port=None, pubkey=None):
+        self.host = host
+        self.port = port
+        self.pubkey = pubkey
+    
+    @classmethod
+    def from_str(cls, s):
+        raise NotImplementedError("Lightning Network is not supported for Scash")
+    
+    def __str__(self):
+        return "LNPeerAddr(lightning not supported)"
 
 
 def read_json(filename, default=None):
@@ -55,8 +83,8 @@ def create_fallback_node_list(fallback_nodes_dict: dict[str, dict]) -> List[LNPe
     return fallback_nodes
 
 
-GIT_REPO_URL = "https://github.com/spesmilo/electrum"
-GIT_REPO_ISSUES_URL = "https://github.com/spesmilo/electrum/issues"
+GIT_REPO_URL = "https://github.com/GoodMan365/electrum-scash"
+GIT_REPO_ISSUES_URL = "https://github.com/GoodMan365/electrum-scash/issues"
 BIP39_WALLET_FORMATS = read_json('bip39_wallet_formats.json')
 
 
@@ -82,7 +110,8 @@ class AbstractNet:
 
     @classmethod
     def max_checkpoint(cls) -> int:
-        return max(0, len(cls.CHECKPOINTS) * 2016 - 1)
+        return (len(cls.CHECKPOINTS) - 1) * 2016
+        #return max(0, len(cls.CHECKPOINTS) * 2016 - 1)
 
     @classmethod
     def rev_genesis_bytes(cls) -> bytes:
@@ -136,18 +165,19 @@ class AbstractNet:
         return cls.NET_NAME
 
 
-class BitcoinMainnet(AbstractNet):
+class ScashMainnet(AbstractNet):
 
-    NET_NAME = "mainnet"
+    NET_NAME = "scash"
     TESTNET = False
     WIF_PREFIX = 0x80
     ADDRTYPE_P2PKH = 0
     ADDRTYPE_P2SH = 5
-    SEGWIT_HRP = "bc"
+    SEGWIT_HRP = "scash"
     BOLT11_HRP = SEGWIT_HRP
-    GENESIS = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+    GENESIS = "e3bf1597a568216022dbda6a0945f09b005d19f041e7158c3cbca9d4029ee82d"
+    GENESIS_RANDOMX_HASH = "018d93624bd03d15f6dc3d4b54a1442318f94c46018b94a8e3262815e050c433"
     DEFAULT_PORTS = {'t': '50001', 's': '50002'}
-    BLOCK_HEIGHT_FIRST_LIGHTNING_CHANNELS = 497000
+    BLOCK_HEIGHT_FIRST_LIGHTNING_CHANNELS = 0  # Scash may not have Lightning
 
     XPRV_HEADERS = {
         'standard':    0x0488ade4,  # xprv
@@ -165,99 +195,240 @@ class BitcoinMainnet(AbstractNet):
         'p2wsh':       0x02aa7ed3,  # Zpub
     }
     XPUB_HEADERS_INV = inv_dict(XPUB_HEADERS)
-    BIP44_COIN_TYPE = 0
+    BIP44_COIN_TYPE = 805  # You may need to check if Scash has a different BIP44 coin type
     LN_REALM_BYTE = 0
-    LN_DNS_SEEDS = [
-        'nodes.lightning.directory.',
-        'lseed.bitcoinstats.com.',
-        'lseed.darosior.ninja',
-    ]
+    LN_DNS_SEEDS = []  # Scash doesn't have Lightning Network
+    # URL for fetching updated server list (set this for SCASH)
+    SERVERS_UPDATE_URL = "https://raw.githubusercontent.com/GoodMan365/electrum-scash/master/electrum/chains/scash/servers.json"
+    SERVERS_CACHE_FILE = "servers_cache.json"
+    SERVERS_CACHE_DURATION = 86400  # 24 hours in seconds
+    
+    # ASERT_ANCHOR_BITS
+    ASERT_ACTIVATION_HEIGHT = 21000
+    ASERT_HALFLIFE = 2 * 24 * 3600  # 2 days in seconds
+    IDEAL_BLOCK_TIME = 600          # 10 minutes in seconds
+    
+    # Anchor Block Parameters (CRITICAL: Uses parent block 18143 timestamp!)
+    ASERT_ANCHOR_HEIGHT = 18144
+    ASERT_ANCHOR_HASH = "6ac8d61f06bc046d45fa9e29cd9d22cd40d26f415944d13eba37a2a0b91a51ad"
+    ASERT_ANCHOR_BITS = 0x1c7b9d90
+    ASERT_ANCHOR_PARENT_TIME = 1712987784  # Block 18143 timestamp
+    ASERT_ANCHOR_PARENT_HASH = "7961a78acc6cde369b78c856190ff9950e166d396ca5cb984879a813172ad19c"
+    
+    # Scash PoW Limit (from genesis block)
+    SCASH_POW_LIMIT = 0x00000fffff000000000000000000000000000000000000000000000000000000
+    ASERT_TARGET_TOLERANCE = 0.003
+    ASERT_MAX_ALLOWED_RATIO = 1 + ASERT_TARGET_TOLERANCE
+    ASERT_MIN_ALLOWED_RATIO = 1 - ASERT_TARGET_TOLERANCE
+    
+    
+    @classmethod
+    def get_asert_anchor_params(cls):
+        """Return ASERT anchor parameters for calculations."""
+        return {
+            'height': cls.ASERT_ANCHOR_HEIGHT,
+            'bits': cls.ASERT_ANCHOR_BITS,
+            'parent_time': cls.ASERT_ANCHOR_PARENT_TIME,
+            'parent_hash': cls.ASERT_ANCHOR_PARENT_HASH
+        }
 
     @classmethod
-    def datadir_subdir(cls):
+    def get_asert_tolerance(cls):
+        """Return tolerance parameters."""
+        return {
+            'max_ratio': cls.ASERT_MAX_ALLOWED_RATIO,
+            'min_ratio': cls.ASERT_MIN_ALLOWED_RATIO,
+            'tolerance': cls.ASERT_TARGET_TOLERANCE
+        }
+        
+   
+    @classproperty
+    def DEFAULT_SERVERS(cls):
+        """Load servers with fallback: URL → Cache → Bundled → Hardcoded"""
+        servers = None
+        
+        # 1. Try to fetch from URL (with caching)
+        servers = cls._get_servers_from_url_with_cache()
+        
+        # 2. Fallback to bundled file
+        if not servers:
+            servers = cls._get_servers_from_bundled()
+        
+        # 3. Final fallback to hardcoded defaults
+        if not servers:
+            servers = cls._get_hardcoded_servers()
+            
+        return servers
+    
+    @classmethod
+    def _get_servers_from_url_with_cache(cls):
+        """Fetch servers from URL with local caching."""
+        try:
+            cache_dir = cls._get_cache_directory()
+            cache_file = os.path.join(cache_dir, cls.SERVERS_CACHE_FILE)
+            
+            # Check cache freshness
+            if os.path.exists(cache_file):
+                cache_age = time.time() - os.path.getmtime(cache_file)
+                if cache_age < cls.SERVERS_CACHE_DURATION:
+                    with open(cache_file, 'r', encoding='utf-8') as f:
+                        return json.load(f)
+            
+            # Start background fetch if not already running
+            # if not hasattr(cls, '_server_fetch_thread'):
+                # cls._start_server_fetch_thread(cache_file)
+            if not getattr(cls, '_server_fetch_thread', None):
+                cls._start_server_fetch_thread(cache_file)
+                # cls._server_fetch_thread = threading.Thread(...)
+                # cls._server_fetch_thread.start()
+            
+            # Use stale cache if available while fetching fresh in background
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+                    
+        except Exception as e:
+            print(f"URL server fetch failed: {e}")
+        
         return None
+    
+    # @classmethod
+    # def _start_server_fetch_thread(cls, cache_file):
+        # """Start a background thread with its own asyncio loop to fetch servers."""
+        # def run_async():
+            # # Create a new event loop for this thread
+            # loop = asyncio.new_event_loop()
+            # asyncio.set_event_loop(loop)
+            # try:
+                # loop.run_until_complete(cls._fetch_servers_async(cache_file))
+            # finally:
+                # loop.close()
+
+        # cls._server_fetch_thread = threading.Thread(group=None, target=run_async, daemon=True)
+        # cls._server_fetch_thread.start()
+        
+    @classmethod
+    def _start_server_fetch_thread(cls, cache_file):
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(cls._fetch_servers_async(cache_file))
+        except RuntimeError:
+            def run_async():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(cls._fetch_servers_async(cache_file))
+                finally:
+                    loop.close()
+            thread = threading.Thread(group=None, target=run_async, daemon=True)
+            thread.start()
+            cls._server_fetch_thread = thread
+
+    @classmethod
+    async def _fetch_servers_async(cls, cache_file):
+        """Async coroutine to fetch and cache servers."""
+        try:
+            timeout = aiohttp.ClientTimeout(total=10)
+            headers = {'User-Agent': 'Electrum-Scash/1.0'}
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(cls.SERVERS_UPDATE_URL, headers=headers) as response:  # ✅ headers passed
+                    response.raise_for_status()
+                    text = await response.text()
+                    servers = json.loads(text)  #json.loads text/plain not json
+                    #servers = await response.json()
+
+                    # if isinstance(servers, dict):
+                        # if servers and all(isinstance(v, dict) and ('t' in v or 's' in v) for v in servers.values()):
+                            # os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                            # with open(cache_file, 'w', encoding='utf-8') as f:
+                                # json.dump(servers, f, indent=2)
+                                
+                    if isinstance(servers, dict):
+                        # Save to cache
+                        os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                        with open(cache_file, 'w', encoding='utf-8') as f:
+                            json.dump(servers, f, indent=2)
+                        
+        except Exception as e:
+            print(f"Background server update failed: {e}")
+    
+    @classmethod
+    def _get_servers_from_bundled(cls):
+        """Load servers from bundled JSON file."""
+        try:
+            servers_file = cls._find_bundled_file('servers.json')
+            with open(servers_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            return None
+    
+    @classmethod
+    def _get_cache_directory(cls):
+        # Android: detected via environment variable set by p4a
+        if 'ANDROID_DATA' in os.environ:
+            from .util import scash_android_data_dir
+            return os.path.join(scash_android_data_dir(), 'cache')
+        
+        # Windows
+        if sys.platform == 'win32':
+            appdata = os.environ.get('APPDATA')
+            if appdata:
+                return os.path.join(appdata, 'Electrum-Scash', 'cache')
+            # Fallback if APPDATA missing
+            return os.path.expanduser('~\\AppData\\Roaming\\Electrum-Scash\\cache')
+        
+        # macOS
+        if sys.platform == 'darwin':
+            return os.path.expanduser('~/Library/Application Support/Electrum-Scash/cache')
+            # Note: On macOS, caches often go in Application Support for user-visible data
+        
+        # Linux 
+        return os.path.expanduser('~/.electrum-scash/cache')
+    # def _get_cache_directory(cls):
+        # """Get platform-specific cache directory."""
+        # if sys.platform == 'win32':
+            # return os.path.join(os.environ.get('APPDATA', ''), 'Electrum-SCASH', 'cache')
+        # else:
+            # return os.path.expanduser('~/.electrum-scash/cache')
+    
+    @classmethod
+    def _find_bundled_file(cls, filename):
+        """Find bundled data files."""
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            return os.path.join(base_path, 'electrum', 'chains', 'scash', filename)
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            return os.path.join(current_dir, 'chains', 'scash', filename)
+    
+    @classmethod
+    def _get_hardcoded_servers(cls):
+        """Hardcoded fallback servers."""
+        return {
+            "154.138.87.132": {"s": "50002"},
+            "localhost": {"t": "50001", "s": "50002"}
+        }
+        
+    @classmethod
+    def datadir_subdir(cls):
+        return cls.NET_NAME
+    
+    @classmethod
+    def max_checkpoint(cls) -> int:
+        """Return the height of the highest checkpoint."""
+        if not cls.CHECKPOINTS:
+            return 0
+        # checkpoints.json loads as list
+        if isinstance(cls.CHECKPOINTS, (list, tuple)):
+            # Each checkpoint represents 2016 blocks
+            return (len(cls.CHECKPOINTS) - 1) * 2016
+        # Hardcoded checkpoints in constants are dict
+        elif isinstance(cls.CHECKPOINTS, dict):
+            return max(cls.CHECKPOINTS.keys())
+        return 0
 
 
-class BitcoinTestnet(AbstractNet):
-
-    NET_NAME = "testnet"
-    TESTNET = True
-    WIF_PREFIX = 0xef
-    ADDRTYPE_P2PKH = 111
-    ADDRTYPE_P2SH = 196
-    SEGWIT_HRP = "tb"
-    BOLT11_HRP = SEGWIT_HRP
-    GENESIS = "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943"
-    DEFAULT_PORTS = {'t': '51001', 's': '51002'}
-
-    XPRV_HEADERS = {
-        'standard':    0x04358394,  # tprv
-        'p2wpkh-p2sh': 0x044a4e28,  # uprv
-        'p2wsh-p2sh':  0x024285b5,  # Uprv
-        'p2wpkh':      0x045f18bc,  # vprv
-        'p2wsh':       0x02575048,  # Vprv
-    }
-    XPRV_HEADERS_INV = inv_dict(XPRV_HEADERS)
-    XPUB_HEADERS = {
-        'standard':    0x043587cf,  # tpub
-        'p2wpkh-p2sh': 0x044a5262,  # upub
-        'p2wsh-p2sh':  0x024289ef,  # Upub
-        'p2wpkh':      0x045f1cf6,  # vpub
-        'p2wsh':       0x02575483,  # Vpub
-    }
-    XPUB_HEADERS_INV = inv_dict(XPUB_HEADERS)
-    BIP44_COIN_TYPE = 1
-    LN_REALM_BYTE = 1
-    LN_DNS_SEEDS = [  # TODO investigate this again
-        #'test.nodes.lightning.directory.',  # times out.
-        #'lseed.bitcoinstats.com.',  # ignores REALM byte and returns mainnet peers...
-    ]
-
-
-class BitcoinTestnet4(BitcoinTestnet):
-
-    NET_NAME = "testnet4"
-    GENESIS = "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043"
-    LN_DNS_SEEDS = []
-
-
-class BitcoinRegtest(BitcoinTestnet):
-
-    NET_NAME = "regtest"
-    SEGWIT_HRP = "bcrt"
-    BOLT11_HRP = SEGWIT_HRP
-    GENESIS = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
-    LN_DNS_SEEDS = []
-
-
-class BitcoinSimnet(BitcoinTestnet):
-
-    NET_NAME = "simnet"
-    WIF_PREFIX = 0x64
-    ADDRTYPE_P2PKH = 0x3f
-    ADDRTYPE_P2SH = 0x7b
-    SEGWIT_HRP = "sb"
-    BOLT11_HRP = SEGWIT_HRP
-    GENESIS = "683e86bd5c6d110d91b94b97137ba6bfe02dbbdb8e3dff722a669b5d69d77af6"
-    LN_DNS_SEEDS = []
-
-
-class BitcoinSignet(BitcoinTestnet):
-
-    NET_NAME = "signet"
-    BOLT11_HRP = "tbs"
-    GENESIS = "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
-    LN_DNS_SEEDS = []
-
-
-class BitcoinMutinynet(BitcoinTestnet):
-
-    NET_NAME = "mutinynet"
-    BOLT11_HRP = "tbs"
-    GENESIS = "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
-    LN_DNS_SEEDS = []
-
-
+    
 NETS_LIST = tuple(all_subclasses(AbstractNet))  # type: Sequence[Type[AbstractNet]]
 NETS_LIST = tuple(sorted(NETS_LIST, key=lambda x: x.NET_NAME))
 
@@ -267,4 +438,4 @@ assert len(NETS_LIST) == len(set([chain.cli_flag() for chain in NETS_LIST])), "c
 assert len(NETS_LIST) == len(set([chain.config_key() for chain in NETS_LIST])), "config_key must be unique for each concrete AbstractNet"
 
 # don't import net directly, import the module instead (so that net is singleton)
-net = BitcoinMainnet  # type: Type[AbstractNet]
+net = ScashMainnet  # type: Type[AbstractNet]

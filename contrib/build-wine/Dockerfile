@@ -69,4 +69,4 @@ RUN chown --recursive ${UID} ${WORK_DIR}
 RUN chown ${UID} /opt
 USER ${UID}
 
-RUN mkdir --parents "/opt/wine64/drive_c/electrum"
+RUN mkdir --parents "/opt/wine64/drive_c/electrum-scash"

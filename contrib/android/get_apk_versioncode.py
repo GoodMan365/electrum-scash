@@ -38,11 +38,11 @@ def get_android_versioncode(*, arch_name: str) -> int:
         app_version = app_version[:c_pos]
     # now the app_version str must contain exactly three dot-delimited components
     app_version_components = app_version.split('.')
-    assert len(app_version_components) == 3, f"version str expected to have 3 components, but got {app_version!r}"
+    assert len(app_version_components) == 3, f"version str expected to have at least 4 components, but got {app_version!r}"
     # convert to int
-    for i in app_version_components:
+    for i in range(3):
         version_code *= 100
-        version_code += int(i)
+        version_code += int(app_version_components[i])
     # add arch
     arch_code = ARCH_DICT[arch_name]
     assert len(arch_code) == 1

@@ -168,7 +168,7 @@ class QEAppController(BaseCrashReporter, QObject):
             icon = ""  # plyer wants image to be in .ico format on Windows
         else:
             icon = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "icons", "electrum.png",
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "icons", "electrum-scash-128.png",
             )
         try:
             # TODO: lazy load not in UI thread please
@@ -476,42 +476,42 @@ class ElectrumQmlApplication(QGuiApplication):
         self.logger = get_logger(__name__)
 
         # TODO QT6 order of declaration is important now?
-        qmlRegisterType(QEAmount, 'org.electrum', 1, 0, 'Amount')
-        qmlRegisterType(QEBytes, 'org.electrum', 1, 0, 'Bytes')
-        qmlRegisterType(QENewWalletWizard, 'org.electrum', 1, 0, 'QNewWalletWizard')
-        qmlRegisterType(QETermsOfUseWizard, 'org.electrum', 1, 0, 'QTermsOfUseWizard')
-        qmlRegisterType(QEServerConnectWizard, 'org.electrum', 1, 0, 'QServerConnectWizard')
-        qmlRegisterType(QEFilterProxyModel, 'org.electrum', 1, 0, 'FilterProxyModel')
-        qmlRegisterType(QSortFilterProxyModel, 'org.electrum', 1, 0, 'QSortFilterProxyModel')
+        qmlRegisterType(QEAmount, 'org.electrumscash', 1, 0, 'Amount')
+        qmlRegisterType(QEBytes, 'org.electrumscash', 1, 0, 'Bytes')
+        qmlRegisterType(QENewWalletWizard, 'org.electrumscash', 1, 0, 'QNewWalletWizard')
+        qmlRegisterType(QETermsOfUseWizard, 'org.electrumscash', 1, 0, 'QTermsOfUseWizard')
+        qmlRegisterType(QEServerConnectWizard, 'org.electrumscash', 1, 0, 'QServerConnectWizard')
+        qmlRegisterType(QEFilterProxyModel, 'org.electrumscash', 1, 0, 'FilterProxyModel')
+        qmlRegisterType(QSortFilterProxyModel, 'org.electrumscash', 1, 0, 'QSortFilterProxyModel')
 
-        qmlRegisterType(QEWallet, 'org.electrum', 1, 0, 'Wallet')
-        qmlRegisterType(QEBitcoin, 'org.electrum', 1, 0, 'Bitcoin')
-        qmlRegisterType(QEQRParser, 'org.electrum', 1, 0, 'QRParser')
-        qmlRegisterType(QEQRScanner, 'org.electrum', 1, 0, 'QRScanner')
-        qmlRegisterType(QEFX, 'org.electrum', 1, 0, 'FX')
-        qmlRegisterType(QETxFinalizer, 'org.electrum', 1, 0, 'TxFinalizer')
-        qmlRegisterType(QEPIResolver, 'org.electrum', 1, 0, 'PIResolver')
-        qmlRegisterType(QEInvoice, 'org.electrum', 1, 0, 'Invoice')
-        qmlRegisterType(QEInvoiceParser, 'org.electrum', 1, 0, 'InvoiceParser')
-        qmlRegisterType(QEAddressDetails, 'org.electrum', 1, 0, 'AddressDetails')
-        qmlRegisterType(QETxDetails, 'org.electrum', 1, 0, 'TxDetails')
-        qmlRegisterType(QEChannelOpener, 'org.electrum', 1, 0, 'ChannelOpener')
-        qmlRegisterType(QELnPaymentDetails, 'org.electrum', 1, 0, 'LnPaymentDetails')
-        qmlRegisterType(QEChannelDetails, 'org.electrum', 1, 0, 'ChannelDetails')
-        qmlRegisterType(QESwapHelper, 'org.electrum', 1, 0, 'SwapHelper')
-        qmlRegisterType(QERequestDetails, 'org.electrum', 1, 0, 'RequestDetails')
-        qmlRegisterType(QETxRbfFeeBumper, 'org.electrum', 1, 0, 'TxRbfFeeBumper')
-        qmlRegisterType(QETxCpfpFeeBumper, 'org.electrum', 1, 0, 'TxCpfpFeeBumper')
-        qmlRegisterType(QETxCanceller, 'org.electrum', 1, 0, 'TxCanceller')
-        qmlRegisterType(QETxSweepFinalizer, 'org.electrum', 1, 0, 'SweepFinalizer')
-        qmlRegisterType(QEBip39RecoveryListModel, 'org.electrum', 1, 0, 'Bip39RecoveryListModel')
-        qmlRegisterType(FeeSlider, 'org.electrum', 1, 0, 'FeeSlider')
+        qmlRegisterType(QEWallet, 'org.electrumscash', 1, 0, 'Wallet')
+        qmlRegisterType(QEBitcoin, 'org.electrumscash', 1, 0, 'Bitcoin')
+        qmlRegisterType(QEQRParser, 'org.electrumscash', 1, 0, 'QRParser')
+        qmlRegisterType(QEQRScanner, 'org.electrumscash', 1, 0, 'QRScanner')
+        qmlRegisterType(QEFX, 'org.electrumscash', 1, 0, 'FX')
+        qmlRegisterType(QETxFinalizer, 'org.electrumscash', 1, 0, 'TxFinalizer')
+        qmlRegisterType(QEPIResolver, 'org.electrumscash', 1, 0, 'PIResolver')
+        qmlRegisterType(QEInvoice, 'org.electrumscash', 1, 0, 'Invoice')
+        qmlRegisterType(QEInvoiceParser, 'org.electrumscash', 1, 0, 'InvoiceParser')
+        qmlRegisterType(QEAddressDetails, 'org.electrumscash', 1, 0, 'AddressDetails')
+        qmlRegisterType(QETxDetails, 'org.electrumscash', 1, 0, 'TxDetails')
+        qmlRegisterType(QEChannelOpener, 'org.electrumscash', 1, 0, 'ChannelOpener')
+        qmlRegisterType(QELnPaymentDetails, 'org.electrumscash', 1, 0, 'LnPaymentDetails')
+        qmlRegisterType(QEChannelDetails, 'org.electrumscash', 1, 0, 'ChannelDetails')
+        qmlRegisterType(QESwapHelper, 'org.electrumscash', 1, 0, 'SwapHelper')
+        qmlRegisterType(QERequestDetails, 'org.electrumscash', 1, 0, 'RequestDetails')
+        qmlRegisterType(QETxRbfFeeBumper, 'org.electrumscash', 1, 0, 'TxRbfFeeBumper')
+        qmlRegisterType(QETxCpfpFeeBumper, 'org.electrumscash', 1, 0, 'TxCpfpFeeBumper')
+        qmlRegisterType(QETxCanceller, 'org.electrumscash', 1, 0, 'TxCanceller')
+        qmlRegisterType(QETxSweepFinalizer, 'org.electrumscash', 1, 0, 'SweepFinalizer')
+        qmlRegisterType(QEBip39RecoveryListModel, 'org.electrumscash', 1, 0, 'Bip39RecoveryListModel')
+        qmlRegisterType(FeeSlider, 'org.electrumscash', 1, 0, 'FeeSlider')
         # TODO QT6: these were declared as uncreatable, but that doesn't seem to work for pyqt6
-        # qmlRegisterUncreatableType(QEAmount, 'org.electrum', 1, 0, 'Amount', 'Amount can only be used as property')
-        # qmlRegisterUncreatableType(QENewWalletWizard, 'org.electrum', 1, 0, 'QNewWalletWizard', 'QNewWalletWizard can only be used as property')
-        # qmlRegisterUncreatableType(QEServerConnectWizard, 'org.electrum', 1, 0, 'QServerConnectWizard', 'QServerConnectWizard can only be used as property')
-        # qmlRegisterUncreatableType(QEFilterProxyModel, 'org.electrum', 1, 0, 'FilterProxyModel', 'FilterProxyModel can only be used as property')
-        # qmlRegisterUncreatableType(QSortFilterProxyModel, 'org.electrum', 1, 0, 'QSortFilterProxyModel', 'QSortFilterProxyModel can only be used as property')
+        # qmlRegisterUncreatableType(QEAmount, 'org.electrumscash', 1, 0, 'Amount', 'Amount can only be used as property')
+        # qmlRegisterUncreatableType(QENewWalletWizard, 'org.electrumscash', 1, 0, 'QNewWalletWizard', 'QNewWalletWizard can only be used as property')
+        # qmlRegisterUncreatableType(QEServerConnectWizard, 'org.electrumscash', 1, 0, 'QServerConnectWizard', 'QServerConnectWizard can only be used as property')
+        # qmlRegisterUncreatableType(QEFilterProxyModel, 'org.electrumscash', 1, 0, 'FilterProxyModel', 'FilterProxyModel can only be used as property')
+        # qmlRegisterUncreatableType(QSortFilterProxyModel, 'org.electrumscash', 1, 0, 'QSortFilterProxyModel', 'QSortFilterProxyModel can only be used as property')
 
         self.engine = QQmlApplicationEngine(parent=self)
 
@@ -557,7 +557,6 @@ class ElectrumQmlApplication(QGuiApplication):
             "MEMPOOL_MB":            electrum.util.UI_UNIT_NAME_MEMPOOL_MB,
         })
 
-        self.plugins.load_plugin_by_name('trustedcoin')
 
         qInstallMessageHandler(self.message_handler)
 

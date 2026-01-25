@@ -1,5 +1,6 @@
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2015 Thomas Voegtlin
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -340,7 +341,9 @@ class ReceiveRequestHelp(NamedTuple):
     ln_zeroconf_suggestion: bool = False
 
     def can_swap(self) -> bool:
-        return bool(self.ln_swap_suggestion)
+        #return bool(self.ln_swap_suggestion)
+        if constants.net.NET_NAME == 'scash':
+            return False
 
     def can_rebalance(self) -> bool:
         return bool(self.ln_rebalance_suggestion)
@@ -503,38 +506,29 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         new_storage.pubkey = self.storage.pubkey
 
         new_db = WalletDB(self.db.dump(), storage=new_storage, upgrade=True)
-        if self.lnworker:
-            channel_backups = new_db.get_dict('imported_channel_backups')
-            for chan_id, chan in self.lnworker.channels.items():
-                channel_backups[chan_id.hex()] = self.lnworker.create_channel_backup(chan_id)
-            new_db.put('channels', None)
-            new_db.put('lightning_privkey2', None)
+        # if self.lnworker:
+            # channel_backups = new_db.get_dict('imported_channel_backups')
+            # for chan_id, chan in self.lnworker.channels.items():
+                # channel_backups[chan_id.hex()] = self.lnworker.create_channel_backup(chan_id)
+            # new_db.put('channels', None)
+            # new_db.put('lightning_privkey2', None)
         new_db.set_modified(True)
         new_db.write()
         return new_path
 
     def has_lightning(self) -> bool:
-        return bool(self.lnworker)
+        return False
 
     def has_channels(self):
-        return self.lnworker is not None and len(self.lnworker._channels) > 0
+        return False
 
     def can_have_lightning(self) -> bool:
         """ whether this wallet can create new channels """
-        # we want static_remotekey to be a wallet address
-        if not self.txin_type == 'p2wpkh':
-            return False
-        if self.config.ENABLE_ANCHOR_CHANNELS:
-            if not self.keystore:
-                return False
-            if self.keystore.is_watching_only():
-                return False
-            # exclude hardware wallets
-            if not self.keystore.may_have_password():
-                return False
-        return True
+        return False
+        
 
     def can_have_deterministic_lightning(self) -> bool:
+        return False
         if not self.can_have_lightning():
             return False
         return self.keystore.can_have_deterministic_lightning_xprv()
@@ -547,15 +541,16 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             assert isinstance(self.keystore, keystore.BIP32_KeyStore)
             ln_xprv = self.keystore.get_lightning_xprv(password)
             self.db.put('lightning_xprv', ln_xprv)
-        else:
-            seed = os.urandom(32)
-            node = BIP32Node.from_rootseed(seed, xtype='standard')
-            ln_xprv = node.to_xprv()
-            self.db.put('lightning_privkey2', ln_xprv)
-        self.lnworker = LNWallet(self, ln_xprv)
+        # else:
+            # seed = os.urandom(32)
+            # node = BIP32Node.from_rootseed(seed, xtype='standard')
+            # ln_xprv = node.to_xprv()
+            # self.db.put('lightning_privkey2', ln_xprv)
+        #self.lnworker = LNWallet(self, ln_xprv)
+        self.lnworker = None  # Ensure it's always None
         self.save_db()
-        if self.network:
-            self._start_network_lightning()
+        # if self.network:
+            # self._start_network_lightning()
 
     async def stop(self):
         """Stop all networking and save DB to disk."""
@@ -1173,8 +1168,10 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         # return only positive values
         c, u, x = self.get_balance()
         fc, fu, fx = self.get_frozen_balance()
-        lightning = self.lnworker.get_balance() if self.has_lightning() else 0
-        f_lightning = self.lnworker.get_balance(frozen=True) if self.has_lightning() else 0
+        # lightning = self.lnworker.get_balance() if self.has_lightning() else 0
+        # f_lightning = self.lnworker.get_balance(frozen=True) if self.has_lightning() else 0
+        lightning = 0
+        f_lightning = 0
         # subtract frozen funds
         cc = c - fc
         uu = u - fu
@@ -1185,8 +1182,8 @@ class Abstract_Wallet(ABC, Logger, EventListener):
             unconfirmed=uu,
             unmatured=xx,
             frozen=frozen,
-            lightning=lightning - f_lightning,
-            lightning_frozen=f_lightning,
+            lightning=lightning, #- f_lightning,
+            lightning_frozen=lightning #f_lightning,
         )
 
     def balance_at_timestamp(self, domain, target_timestamp):
@@ -3024,7 +3021,6 @@ class Abstract_Wallet(ABC, Logger, EventListener):
 
     def create_request(self, amount_sat: Optional[int], message: Optional[str], exp_delay: Optional[int], address: Optional[str]):
         """ will create a lightning request if address is None """
-        # for receiving
         amount_sat = amount_sat or 0
         assert isinstance(amount_sat, int), f"{amount_sat!r}"
         amount_msat = None if not amount_sat else amount_sat * 1000  # amount_sat in [None, 0] implies undefined.
@@ -3033,14 +3029,11 @@ class Abstract_Wallet(ABC, Logger, EventListener):
         exp_delay = exp_delay or 0
         timestamp = int(Request._get_cur_time())
         if address is None:
-            assert self.has_lightning()
-            payment_hash = self.lnworker.create_payment_info(
-                amount_msat=amount_msat,
-                exp_delay=exp_delay,
-                write_to_disk=False,
-            )
+            self.show_error(_('Make Sure Your Wallet Is Unlocked And Has Unused Address')) 
+            return
         else:
             payment_hash = None
+        
         outputs = [PartialTxOutput.from_address_and_value(address, amount_sat)] if address else []
         height = self.adb.get_local_height()
         req = Request(
@@ -3868,7 +3861,8 @@ class Deterministic_Wallet(Abstract_Wallet):
         ln_xprv = self.db.get('lightning_xprv') or self.db.get('lightning_privkey2')
         # lnworker can only be initialized once receiving addresses are available
         # therefore we instantiate lnworker in DeterministicWallet
-        self.lnworker = LNWallet(self, ln_xprv) if ln_xprv else None
+        self.lnworker = None
+        #self.lnworker = LNWallet(self, ln_xprv) if ln_xprv else None
 
     def has_seed(self):
         return self.keystore.has_seed()

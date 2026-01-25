@@ -1,13 +1,13 @@
 [app]
 
 # (str) Title of your application
-title = Electrum
+title = Electrum-Scash
 
 # (str) Package name
-package.name = Electrum
+package.name = electrumscash
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = org.electrum
+package.domain = org.electrumscash
 
 # (str) Source code where the main.py live
 source.dir = .
@@ -57,11 +57,13 @@ source.exclude_dirs =
 source.exclude_patterns = Makefile,setup*,
     # not reproducible:
     packages/aiohttp-*.dist-info/*,
-    packages/frozenlist-*.dist-info/*
+    packages/frozenlist-*.dist-info/*,
+	electrum/electrum
 
 # (str) Application versioning (method 1)
 version.regex = ELECTRUM_VERSION = '(.*)'
 version.filename = %(source.dir)s/electrum/version.py
+
 
 # (str) Application versioning (method 2)
 #version = 1.9.8
@@ -153,7 +155,7 @@ android.accept_sdk_license = True
 #android.add_jars = foo.jar,bar.jar,path/to/more/*.jar
 #android.add_jars = lib/android/zbar.jar
 
-android.add_jars = .buildozer/android/platform/*/build/libs_collections/Electrum/jar/*.jar
+android.add_jars = .buildozer/android/platform/*/build/libs_collections/electrumscash/jar/*.jar
 
 
 android.add_aars =
@@ -171,7 +173,7 @@ android.gradle_dependencies =
     com.android.support:support-compat:28.0.0,
     org.jetbrains.kotlin:kotlin-stdlib:1.8.22
 
-android.add_activities = org.electrum.qr.SimpleScannerActivity
+android.add_activities = org.electrumscash.qr.SimpleScannerActivity
 
 # (list) Put these files or directories in the apk res directory.
 # The option may be used in three ways, the value may contain one or zero ':'
@@ -197,7 +199,8 @@ android.add_resources = electrum/gui/qml/android_res/layout:layout
 #android.ouya.icon.filename = %(source.dir)s/data/ouya_icon.png
 
 # (str) XML file to include as an intent filters in <activity> tag
-android.manifest.intent_filters = contrib/android/bitcoin_intent.xml
+# android.manifest.intent_filters = contrib/android/bitcoin_intent.xml
+android.manifest.intent_filters = contrib/android/scash_intent.xml
 
 # (str) launchMode to set for the main activity
 android.manifest.launch_mode = singleTask
@@ -216,6 +219,7 @@ android.manifest.launch_mode = singleTask
 # (int) overrides automatic versionCode computation (used in build.gradle)
 # this is not the same as app version and should only be edited if you know what you're doing
 # android.numeric_version = 1
+#android.numeric_version = 4060201
 
 # (list) Android application meta-data to set (key=value format)
 #android.meta_data =

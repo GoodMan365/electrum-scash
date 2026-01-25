@@ -26,7 +26,7 @@ prepare:
 	# running pre build setup
 	# copy electrum to main.py
 	@cp buildozer_$(ELEC_APK_GUI).spec ../../buildozer.spec
-	@cp ../../run_electrum ../../main.py
+	@cp ../../run_electrum-scash ../../main.py
 apk:
 	@make prepare
 	@-cd ../..; buildozer android debug

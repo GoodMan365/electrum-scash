@@ -153,3 +153,13 @@ most communication about Electrum development happens on IRC, in the
 with the web client, [web.libera.chat](https://web.libera.chat/#electrum).
 
 Please improve translations on [Crowdin](https://crowdin.com/project/electrum).
+
+
+Releases are signed by:
+
+    514E 2707 7335 D13C EB12  35AF 7EC4 35BF 9FCD F13C
+    Electrum-Scash <azhar.isn@proton.me>
+
+To verify:
+    gpg --import contrib/pubkeys/electrum-scash.asc
+    gpg --verify Electrum-Scash-*.AppImage.asc

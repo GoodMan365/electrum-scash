@@ -218,12 +218,12 @@ class SimpleConfig(Logger):
 
         # units and formatting
         try:
-            decimal_point_to_base_unit_name(self.BTC_AMOUNTS_DECIMAL_POINT)
+            decimal_point_to_base_unit_name(self.SCASH_AMOUNTS_DECIMAL_POINT)
         except UnknownBaseUnit:
-            self.BTC_AMOUNTS_DECIMAL_POINT = DECIMAL_POINT_DEFAULT
-        self.num_zeros = self.BTC_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT
-        self.amt_precision_post_satoshi = self.BTC_AMOUNTS_PREC_POST_SAT
-        self.amt_add_thousands_sep = self.BTC_AMOUNTS_ADD_THOUSANDS_SEP
+            self.SCASH_AMOUNTS_DECIMAL_POINT = DECIMAL_POINT_DEFAULT
+        self.num_zeros = self.SCASH_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT
+        self.amt_precision_post_satoshi = self.SCASH_AMOUNTS_PREC_POST_SAT
+        self.amt_add_thousands_sep = self.SCASH_AMOUNTS_ADD_THOUSANDS_SEP
 
         self._init_done = True
 
@@ -242,8 +242,15 @@ class SimpleConfig(Logger):
         # ~hack for easier testnet builds. pkgname subject to change.
         android_pkg_name = util.get_android_package_name()
         for chain in constants.NETS_LIST:
-            if android_pkg_name == f"org.electrum.{chain.cli_flag()}.electrum":
+            if android_pkg_name == f"org.electrumscash.{chain.cli_flag()}.electrumscash":
                 config_options[chain.cli_flag()] = True
+    
+    # @classmethod
+    # def set_chain_config_opt_based_on_android_packagename(cls, config_options: dict[str, Any]) -> None:
+        # android_pkg_name = util.get_android_package_name()
+        # # Enable Scash chain if package name matches our fork
+        # if android_pkg_name.startswith("org.electrumscash"):
+            # config_options['scash'] = True
 
     def get_selected_chain(self) -> Type[constants.AbstractNet]:
         selected_chains = [
@@ -252,7 +259,7 @@ class SimpleConfig(Logger):
         if selected_chains:
             # note: if multiple are selected, we just pick one deterministically random
             return selected_chains[0]
-        return constants.BitcoinMainnet
+        return constants.ScashMainnet
 
     def electrum_path(self):
         path = self.electrum_path_root()
@@ -261,7 +268,7 @@ class SimpleConfig(Logger):
             path = os.path.join(path, subdir)
             make_dir(path, allow_symlink=False)
 
-        self.logger.info(f"electrum directory {path} (chain={chain.NET_NAME})")
+        self.logger.info(f"simple_config: electrum directory {path} (chain={chain.NET_NAME})")
         return path
 
     def rename_config_keys(self, config, keypairs, deprecation_warning=False):
@@ -403,14 +410,32 @@ class SimpleConfig(Logger):
 
         self.set_key('config_version', 2)
 
+    # def convert_version_3(self):
+        # if not self._is_upgrade_method_needed(2, 2):
+            # return
+        # base_unit = self.user_config.get('base_unit')
+        # if isinstance(base_unit, str):
+            # self._set_key_in_user_config('base_unit', None)
+            # map_ = {'btc': 8, 'mbtc': 5, 'ubtc': 2, 'bits': 2, 'sat': 0}
+            # decimal_point = map_.get(base_unit.lower())
+            # self._set_key_in_user_config('decimal_point', decimal_point)
+        # self.set_key('config_version', 3)
+    
     def convert_version_3(self):
         if not self._is_upgrade_method_needed(2, 2):
             return
         base_unit = self.user_config.get('base_unit')
         if isinstance(base_unit, str):
             self._set_key_in_user_config('base_unit', None)
+            # Map old Electrum units to decimal points
             map_ = {'btc': 8, 'mbtc': 5, 'ubtc': 2, 'bits': 2, 'sat': 0}
-            decimal_point = map_.get(base_unit.lower())
+            # Also support your new units (unlikely, but safe)
+            if base_unit.lower() in ('scash',):
+                decimal_point = 8
+            elif base_unit.lower() in ('mscash', 'msc'):
+                decimal_point = 5
+            else:
+                decimal_point = map_.get(base_unit.lower())
             self._set_key_in_user_config('decimal_point', decimal_point)
         self.set_key('config_version', 3)
 
@@ -528,7 +553,7 @@ class SimpleConfig(Logger):
         return format_satoshis(
             amount_sat,
             num_zeros=self.num_zeros,
-            decimal_point=self.BTC_AMOUNTS_DECIMAL_POINT,
+            decimal_point=self.SCASH_AMOUNTS_DECIMAL_POINT,
             is_diff=is_diff,
             whitespaces=whitespaces,
             precision=precision,
@@ -543,31 +568,28 @@ class SimpleConfig(Logger):
         return format_fee_satoshis(fee_rate/1000, num_zeros=self.num_zeros) + f" {util.UI_UNIT_NAME_FEERATE_SAT_PER_VBYTE}"
 
     def get_base_unit(self):
-        return decimal_point_to_base_unit_name(self.BTC_AMOUNTS_DECIMAL_POINT)
+        return decimal_point_to_base_unit_name(self.SCASH_AMOUNTS_DECIMAL_POINT)
 
     def set_base_unit(self, unit):
         assert unit in base_units.keys()
-        self.BTC_AMOUNTS_DECIMAL_POINT = base_unit_name_to_decimal_point(unit)
+        self.SCASH_AMOUNTS_DECIMAL_POINT = base_unit_name_to_decimal_point(unit)
 
     def get_nostr_relays(self) -> Sequence[str]:
         relays = []
-        for url in self.NOSTR_RELAYS.split(','):
-            url = url.strip()
-            if url and is_valid_websocket_url(url):
-                relays.append(url)
+        url = url.strip()
+        if url and is_valid_websocket_url(url):
+            relays.append(url)
         return relays
 
     def add_nostr_relay(self, relay: str):
         l = self.get_nostr_relays()
         if is_valid_websocket_url(relay) and relay not in l:
             l.append(relay)
-            self.NOSTR_RELAYS = ','.join(l)
 
     def remove_nostr_relay(self, relay: str):
         l = self.get_nostr_relays()
         if relay in l:
             l.remove(relay)
-            self.NOSTR_RELAYS = ','.join(l)
 
     def __setattr__(self, name, value):
         """Disallows setting instance attributes outside __init__.
@@ -677,17 +699,17 @@ class SimpleConfig(Logger):
     WALLET_PAYREQ_EXPIRY_SECONDS = ConfigVar('request_expiry', default=invoices.PR_DEFAULT_EXPIRATION_WHEN_CREATING, type_=int)
     WALLET_USE_SINGLE_PASSWORD = ConfigVar('single_password', default=False, type_=bool)
     # note: 'use_change' and 'multiple_change' are per-wallet settings
+    # Disable Lightning-related wallet features
     WALLET_SEND_CHANGE_TO_LIGHTNING = ConfigVar(
         'send_change_to_lightning', default=False, type_=bool,
-        short_desc=lambda: _('Send change to Lightning'),
-        long_desc=lambda: _('If possible, send the change of this transaction to your channels, with a submarine swap'),
+        short_desc=lambda: _('Lightning not supported'),
+        long_desc=lambda: _('Lightning Network is not supported for Scash.'),
     )
+    
     WALLET_ENABLE_SUBMARINE_PAYMENTS = ConfigVar(
         'enable_submarine_payments', default=False, type_=bool,
-        short_desc=lambda: _('Submarine Payments'),
-        long_desc=lambda: _('Send onchain payments directly from your Lightning balance with a '
-                            'submarine swap. This allows you to do onchain transactions even if your entire '
-                            'wallet balance is inside Lightning channels.')
+        short_desc=lambda: _('Lightning not supported'),
+        long_desc=lambda: _('Lightning Network is not supported for Scash.'),
     )
     WALLET_FREEZE_REUSED_ADDRESS_UTXOS = ConfigVar(
         'wallet_freeze_reused_address_utxos', default=False, type_=bool,
@@ -720,58 +742,64 @@ If disabled, the full wallet file is written to disk for every change. Experimen
 
     LIGHTNING_LISTEN = ConfigVar(
         'lightning_listen', default=None, type_=str,
-        long_desc=lambda: _("""By default the client does not listen on any port for incoming BOLT-08 transports.
-Set this to an interface:port combination, such as 'localhost:9735', to open a port and start listening.
-
-Note: if you open multiple lightning wallets, they will all try to bind the same port, conflict, and only the first will succeed."""),
+        long_desc=lambda: _("""Lightning not supported for Scash."""),
     )
+    
     LIGHTNING_PEERS = ConfigVar('lightning_peers', default=None)
+    
     LIGHTNING_USE_GOSSIP = ConfigVar(
         'use_gossip', default=False, type_=bool,
-        short_desc=lambda: _("Use trampoline routing"),
-        long_desc=lambda: _("""Lightning payments require finding a path through the Lightning Network. You may use trampoline routing, or local routing (gossip).
-
-Downloading the network gossip uses quite some bandwidth and storage, and is not recommended on mobile devices. If you use trampoline, you can only open channels with trampoline nodes."""),
+        short_desc=lambda: _("Lightning not supported"),
+        long_desc=lambda: _("""Lightning Network is not supported for Scash."""),
     )
+    
     LIGHTNING_USE_RECOVERABLE_CHANNELS = ConfigVar(
-        'use_recoverable_channels', default=True, type_=bool,
-        short_desc=lambda: _("Create recoverable channels"),
-        long_desc=lambda: _("""Add extra data to your channel funding transactions, so that a static backup can be recovered from your seed.
-
-Note that static backups only allow you to request a force-close with the remote node. This assumes that the remote node is still online, did not lose its data, and accepts to force close the channel.
-
-If this is enabled, other nodes cannot open a channel to you. Channel recovery data is encrypted, so that only your wallet can decrypt it. However, blockchain analysis will be able to tell that the transaction was probably created by Electrum."""),
+        'use_recoverable_channels', default=False, type_=bool,
+        short_desc=lambda: _("Lightning not supported"),
+        long_desc=lambda: _("""Lightning Network is not supported for Scash."""),
     )
-    LIGHTNING_TO_SELF_DELAY_CSV = ConfigVar('lightning_to_self_delay', default=7 * 144, type_=int)
-    LIGHTNING_MAX_FUNDING_SAT = ConfigVar('lightning_max_funding_sat', default=LN_MAX_FUNDING_SAT_LEGACY, type_=int)
-    LIGHTNING_MAX_HTLC_VALUE_IN_FLIGHT_MSAT = ConfigVar('lightning_max_htlc_value_in_flight_msat', default=None, type_=int)
-    INITIAL_TRAMPOLINE_FEE_LEVEL = ConfigVar('initial_trampoline_fee_level', default=1, type_=int)
+    
+    LIGHTNING_TO_SELF_DELAY_CSV = ConfigVar('lightning_to_self_delay', default=0, type_=int)
+    
+    LIGHTNING_MAX_FUNDING_SAT = ConfigVar('lightning_max_funding_sat', default=0, type_=int)
+    
+    LIGHTNING_MAX_HTLC_VALUE_IN_FLIGHT_MSAT = ConfigVar('lightning_max_htlc_value_in_flight_msat', default=0, type_=int)
+    
+    INITIAL_TRAMPOLINE_FEE_LEVEL = ConfigVar('initial_trampoline_fee_level', default=0, type_=int)
+    
     LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS = ConfigVar(
-        'lightning_payment_fee_max_millionths', default=10_000,  # 1%
+        'lightning_payment_fee_max_millionths', default=0,
         type_=int,
-        short_desc=lambda: _("Max lightning fees to pay"),
-        long_desc=lambda: _("""When sending lightning payments, this value is an upper bound for the fees we allow paying, proportional to the payment amount. The fees are paid in addition to the payment amount, by the sender.
-
-Warning: setting this to too low will result in lots of payment failures."""),
+        short_desc=lambda: _("Lightning not supported"),
+        long_desc=lambda: _("""Lightning Network is not supported for Scash."""),
     )
+    
     LIGHTNING_PAYMENT_FEE_CUTOFF_MSAT = ConfigVar(
-        'lightning_payment_fee_cutoff_msat', default=10_000,  # 10 sat
+        'lightning_payment_fee_cutoff_msat', default=0,
         type_=int,
-        short_desc=lambda: _("Max lightning fees to pay for small payments"),
+        short_desc=lambda: _("Lightning not supported"),
     )
-
+    
     LIGHTNING_NODE_ALIAS = ConfigVar('lightning_node_alias', default='', type_=str)
+    
     LIGHTNING_NODE_COLOR_RGB = ConfigVar('lightning_node_color_rgb', default='000000', type_=str)
+    
     EXPERIMENTAL_LN_FORWARD_PAYMENTS = ConfigVar('lightning_forward_payments', default=False, type_=bool)
+    
     EXPERIMENTAL_LN_FORWARD_TRAMPOLINE_PAYMENTS = ConfigVar('lightning_forward_trampoline_payments', default=False, type_=bool)
     TEST_FAIL_HTLCS_WITH_TEMP_NODE_FAILURE = ConfigVar('test_fail_htlcs_with_temp_node_failure', default=False, type_=bool)
+    
     TEST_FAIL_HTLCS_AS_MALFORMED = ConfigVar('test_fail_malformed_htlc', default=False, type_=bool)
+    
     TEST_FORCE_MPP = ConfigVar('test_force_mpp', default=False, type_=bool)
+    
     TEST_FORCE_DISABLE_MPP = ConfigVar('test_force_disable_mpp', default=False, type_=bool)
+    
     TEST_SHUTDOWN_FEE = ConfigVar('test_shutdown_fee', default=None, type_=int)
+    
     TEST_SHUTDOWN_FEE_RANGE = ConfigVar('test_shutdown_fee_range', default=None)
+    
     TEST_SHUTDOWN_LEGACY = ConfigVar('test_shutdown_legacy', default=False, type_=bool)
-
     # fee_policy is a dict: fee_policy_name -> fee_policy_descriptor
     FEE_POLICY = ConfigVar('fee_policy.default', default='eta:2', type_=str)  # exposed to GUI
     FEE_POLICY_LIGHTNING = ConfigVar('fee_policy.lnwatcher', default='eta:2', type_=str)  # for txbatcher (sweeping)
@@ -847,23 +875,23 @@ Warning: setting this to too low will result in lots of payment failures."""),
     GUI_QML_ALWAYS_ALLOW_SCREENSHOTS = ConfigVar('android_always_allow_screenshots', default=False, type_=bool)
     GUI_QML_SET_MAX_BRIGHTNESS_ON_QR_DISPLAY = ConfigVar('android_set_max_brightness_on_qr_display', default=True, type_=bool)
 
-    BTC_AMOUNTS_DECIMAL_POINT = ConfigVar('decimal_point', default=DECIMAL_POINT_DEFAULT, type_=int)
-    BTC_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT = ConfigVar(
+    SCASH_AMOUNTS_DECIMAL_POINT = ConfigVar('decimal_point', default=DECIMAL_POINT_DEFAULT, type_=int)
+    SCASH_AMOUNTS_FORCE_NZEROS_AFTER_DECIMAL_POINT = ConfigVar(
         'num_zeros', default=0, type_=int,
         short_desc=lambda: _('Zeros after decimal point'),
         long_desc=lambda: _('Number of zeros displayed after the decimal point. For example, if this is set to 2, "1." will be displayed as "1.00"'),
     )
-    BTC_AMOUNTS_PREC_POST_SAT = ConfigVar(
+    SCASH_AMOUNTS_PREC_POST_SAT = ConfigVar(
         'amt_precision_post_satoshi', default=0, type_=int,
         short_desc=lambda: _("Show Lightning amounts with msat precision"),
     )
-    BTC_AMOUNTS_ADD_THOUSANDS_SEP = ConfigVar(
+    SCASH_AMOUNTS_ADD_THOUSANDS_SEP = ConfigVar(
         'amt_add_thousands_sep', default=False, type_=bool,
-        short_desc=lambda: _("Add thousand separators to bitcoin amounts"),
+        short_desc=lambda: _("Add thousand separators to SCASH amounts"),
     )
 
     BLOCK_EXPLORER = ConfigVar(
-        'block_explorer', default='Blockstream.info', type_=str,
+        'block_explorer', default='SCASH.TV', type_=str,  # Changed default to SCASH.TV
         short_desc=lambda: _('Online Block Explorer'),
         long_desc=lambda: _('Choose which online block explorer to use for functions that open a web browser'),
     )
@@ -944,24 +972,29 @@ Warning: setting this to too low will result in lots of payment failures."""),
     )
 
     # anchor outputs channels
-    ENABLE_ANCHOR_CHANNELS = ConfigVar('enable_anchor_channels', default=True, type_=bool)
-    # zeroconf channels
+    # Disable Lightning-specific features
+    ENABLE_ANCHOR_CHANNELS = ConfigVar('enable_anchor_channels', default=False, type_=bool)
+    
     ACCEPT_ZEROCONF_CHANNELS = ConfigVar('accept_zeroconf_channels', default=False, type_=bool)
+    
     ZEROCONF_TRUSTED_NODE = ConfigVar('zeroconf_trusted_node', default='', type_=str)
-    ZEROCONF_MIN_OPENING_FEE = ConfigVar('zeroconf_min_opening_fee', default=5000, type_=int)
+    
+    ZEROCONF_MIN_OPENING_FEE = ConfigVar('zeroconf_min_opening_fee', default=0, type_=int)
+    
     LN_UTXO_RESERVE = ConfigVar(
         'ln_utxo_reserve',
-        default=10000,
+        default=0,
         type_=int,
-        short_desc=lambda: _("Amount that must be kept on-chain in order to sweep anchor output channels"),
-        long_desc=lambda: _("Do not set this below dust limit"),
+        short_desc=lambda: _("Lightning not supported"),
+        long_desc=lambda: _("Lightning Network is not supported for Scash."),
     )
 
     # connect to remote WT
     WATCHTOWER_CLIENT_URL = ConfigVar('watchtower_url', default=None, type_=str)
 
-    PLUGIN_TRUSTEDCOIN_NUM_PREPAY = ConfigVar('trustedcoin_prepay', default=20, type_=int)
 
+    
+    
 
 def read_user_config(path: Optional[str]) -> Dict[str, Any]:
     """Parse and store the user config settings in electrum.conf into user_config[]."""

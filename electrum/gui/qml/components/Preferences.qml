@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -15,7 +15,7 @@ Pane {
 
     padding: 0
 
-    property var _baseunits: ['BTC','mBTC','bits','sat']
+    property var _baseunits: ['SCASH','mSCASH','bits','sat']
 
     ColumnLayout {
         anchors.fill: parent
@@ -55,7 +55,7 @@ Pane {
                                 if (Config.language != currentValue) {
                                     Config.language = currentValue
                                     var dialog = app.messageDialog.createObject(app, {
-                                        text: qsTr('Please restart Electrum to activate the new GUI settings')
+                                        text: qsTr('Please restart Electrum-Scash to activate the new GUI settings')
                                     })
                                     dialog.open()
                                 }
@@ -89,7 +89,7 @@ Pane {
                         }
                         Label {
                             Layout.fillWidth: true
-                            text: qsTr('Add thousands separators to bitcoin amounts')
+                            text: qsTr('Add thousands separators to scash amounts')
                             wrapMode: Text.Wrap
                         }
                     }
@@ -231,23 +231,23 @@ Pane {
                         }
                     }
 
-                    RowLayout {
-                        Layout.columnSpan: 2
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Switch {
-                            id: psbtNostr
-                            onCheckedChanged: {
-                                if (activeFocus)
-                                    AppController.setPluginEnabled('psbt_nostr', checked)
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: qsTr('Nostr Cosigner')
-                            wrapMode: Text.Wrap
-                        }
-                    }
+                   // RowLayout {
+                   //     Layout.columnSpan: 2
+                   //     Layout.fillWidth: true
+                   //     spacing: 0
+                   //     Switch {
+                   //         id: psbtNostr
+                   //         onCheckedChanged: {
+                   //             if (activeFocus)
+                   //                 AppController.setPluginEnabled('psbt_nostr', checked)
+                   //         }
+                   //     }
+                   //     Label {
+                   //         Layout.fillWidth: true
+                   //         text: qsTr('Nostr Cosigner')
+                   //         wrapMode: Text.Wrap
+                   //     }
+                   // }
 
                     RowLayout {
                         Layout.columnSpan: 2
@@ -306,115 +306,115 @@ Pane {
                         }
                     }
 
-                    PrefsHeading {
-                        Layout.columnSpan: 2
-                        text: qsTr('Lightning')
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: Config.shortDescFor('LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS')
-                        wrapMode: Text.Wrap
-                    }
-
-                    Label {
-                        Layout.fillWidth: true
-                        text: qsTr('<b>%1%</b> of payment').arg(maxfeeslider._fees[maxfeeslider.value]/10000)
-                        wrapMode: Text.Wrap
-                    }
-
-                    Slider {
-                        id: maxfeeslider
-                        Layout.columnSpan: 2
-                        Layout.fillWidth: true
-                        Layout.leftMargin: constants.paddingXLarge
-                        Layout.rightMargin: constants.paddingXLarge
-
-                        property var _fees: [500, 1000, 3000, 5000, 10000, 20000, 30000, 50000]
-
-                        snapMode: Slider.SnapOnRelease
-                        stepSize: 1
-                        from: 0
-                        to: _fees.length - 1
-
-                        onValueChanged: {
-                            if (activeFocus)
-                                Config.lightningPaymentFeeMaxMillionths = _fees[value]
-                        }
-
-                        Component.onCompleted: {
-                            value = _fees.indexOf(Config.lightningPaymentFeeMaxMillionths)
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.columnSpan: 2
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Switch {
-                            id: useTrampolineRouting
-                            onCheckedChanged: {
-                                if (activeFocus) {
-                                    if (!checked) {
-                                        var dialog = app.messageDialog.createObject(app, {
-                                            title: qsTr('Are you sure?'),
-                                            text: qsTr('Electrum will have to download the Lightning Network graph, which is not recommended on mobile.'),
-                                            yesno: true
-                                        })
-                                        dialog.accepted.connect(function() {
-                                            Config.useGossip = true
-                                        })
-                                        dialog.rejected.connect(function() {
-                                            checked = true // revert
-                                        })
-                                        dialog.open()
-                                    } else {
-                                        Config.useGossip = !checked
-                                    }
-                                }
-
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: qsTr('Trampoline routing')
-                            wrapMode: Text.Wrap
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.columnSpan: 2
-                        Layout.fillWidth: true
-                        spacing: 0
-                        Switch {
-                            id: useRecoverableChannels
-                            onCheckedChanged: {
-                                if (activeFocus) {
-                                    if (!checked) {
-                                        var dialog = app.messageDialog.createObject(app, {
-                                            title: qsTr('Are you sure?'),
-                                            text: qsTr('This option allows you to recover your lightning funds if you lose your device, or if you uninstall this app while lightning channels are active. Do not disable it unless you know how to recover channels from backups.'),
-                                            yesno: true
-                                        })
-                                        dialog.accepted.connect(function() {
-                                            Config.useRecoverableChannels = false
-                                        })
-                                        dialog.rejected.connect(function() {
-                                            checked = true // revert
-                                        })
-                                        dialog.open()
-                                    } else {
-                                        Config.useRecoverableChannels = checked
-                                    }
-                                }
-                            }
-                        }
-                        Label {
-                            Layout.fillWidth: true
-                            text: qsTr('Create recoverable channels')
-                            wrapMode: Text.Wrap
-                        }
-                    }
+                    //PrefsHeading {
+                    //    Layout.columnSpan: 2
+                    //    text: qsTr('Lightning')
+                    //}
+					//
+                    //Label {
+                    //    Layout.fillWidth: true
+                    //    text: Config.shortDescFor('LIGHTNING_PAYMENT_FEE_MAX_MILLIONTHS')
+                    //    wrapMode: Text.Wrap
+                    //}
+					//
+                    //Label {
+                    //    Layout.fillWidth: true
+                    //    text: qsTr('<b>%1%</b> of payment').arg(maxfeeslider._fees[maxfeeslider.value]/10000)
+                    //    wrapMode: Text.Wrap
+                    //}
+					//
+                    //Slider {
+                    //    id: maxfeeslider
+                    //    Layout.columnSpan: 2
+                    //    Layout.fillWidth: true
+                    //    Layout.leftMargin: constants.paddingXLarge
+                    //    Layout.rightMargin: constants.paddingXLarge
+					//
+                    //    property var _fees: [500, 1000, 3000, 5000, 10000, 20000, 30000, 50000]
+					//
+                    //    snapMode: Slider.SnapOnRelease
+                    //    stepSize: 1
+                    //    from: 0
+                    //    to: _fees.length - 1
+					//
+                    //    onValueChanged: {
+                    //        if (activeFocus)
+                    //            Config.lightningPaymentFeeMaxMillionths = _fees[value]
+                    //    }
+					//
+                    //    Component.onCompleted: {
+                    //        value = _fees.indexOf(Config.lightningPaymentFeeMaxMillionths)
+                    //    }
+                    //}
+					//
+                    //RowLayout {
+                    //    Layout.columnSpan: 2
+                    //    Layout.fillWidth: true
+                    //    spacing: 0
+                    //    Switch {
+                    //        id: useTrampolineRouting
+                    //        onCheckedChanged: {
+                    //            if (activeFocus) {
+                    //                if (!checked) {
+                    //                    var dialog = app.messageDialog.createObject(app, {
+                    //                        title: qsTr('Are you sure?'),
+                    //                        text: qsTr('Electrum-Scash will have to download the Lightning Network graph, which is not recommended on mobile.'),
+                    //                        yesno: true
+                    //                    })
+                    //                    dialog.accepted.connect(function() {
+                    //                        Config.useGossip = true
+                    //                    })
+                    //                    dialog.rejected.connect(function() {
+                    //                        checked = true // revert
+                    //                    })
+                    //                    dialog.open()
+                    //                } else {
+                    //                    Config.useGossip = !checked
+                    //                }
+                    //            }
+					//
+                    //        }
+                    //    }
+                    //    Label {
+                    //        Layout.fillWidth: true
+                    //        text: qsTr('Trampoline routing')
+                    //        wrapMode: Text.Wrap
+                    //    }
+                    //}
+					//
+                    //RowLayout {
+                    //    Layout.columnSpan: 2
+                    //    Layout.fillWidth: true
+                    //    spacing: 0
+                    //    Switch {
+                    //        id: useRecoverableChannels
+                    //        onCheckedChanged: {
+                    //            if (activeFocus) {
+                    //                if (!checked) {
+                    //                    var dialog = app.messageDialog.createObject(app, {
+                    //                        title: qsTr('Are you sure?'),
+                    //                        text: qsTr('This option allows you to recover your lightning funds if you lose your device, or if you uninstall this app while lightning channels are active. Do not disable it unless you know how to recover channels from backups.'),
+                    //                        yesno: true
+                    //                    })
+                    //                    dialog.accepted.connect(function() {
+                    //                        Config.useRecoverableChannels = false
+                    //                    })
+                    //                    dialog.rejected.connect(function() {
+                    //                        checked = true // revert
+                    //                    })
+                    //                    dialog.open()
+                    //                } else {
+                    //                    Config.useRecoverableChannels = checked
+                    //                }
+                    //            }
+                    //        }
+                    //    }
+                    //    Label {
+                    //        Layout.fillWidth: true
+                    //        text: qsTr('Create recoverable channels')
+                    //        wrapMode: Text.Wrap
+                    //    }
+                    //}
 
                     PrefsHeading {
                         Layout.columnSpan: 2

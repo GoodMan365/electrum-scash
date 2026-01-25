@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (2019) The Electrum Developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -49,7 +50,7 @@ from .util import (WindowModalDialog, ColorScheme, HelpLabel, Buttons, CancelBut
                    read_QIcon, debug_widget_layouts, qt_event_listener, QtEventListener, IconLabel)
 from .transaction_dialog import TxSizeLabel, TxFiatLabel, TxInOutWidget
 from .fee_slider import FeeSlider, FeeComboBox
-from .amountedit import FeerateEdit, BTCAmountEdit
+from .amountedit import FeerateEdit, SCASHAmountEdit
 from .locktimeedit import LockTimeEdit
 from .my_treeview import QMenuWithConfig
 from .swap_dialog import SwapProvidersButton
@@ -237,7 +238,7 @@ class TxEditor(WindowModalDialog, QtEventListener, Logger):
         self.feerate_e.editingFinished.connect(partial(self.on_fee_or_feerate, self.feerate_e, True))
         self.update_feerate_label()
 
-        self.fee_e = BTCAmountEdit(self.main_window.get_decimal_point)
+        self.fee_e = SCASHAmountEdit(self.main_window.get_decimal_point)
         self.fee_e.textEdited.connect(partial(self.on_fee_or_feerate, self.fee_e, False))
         self.fee_e.editingFinished.connect(partial(self.on_fee_or_feerate, self.fee_e, True))
 
@@ -704,7 +705,7 @@ class TxEditor(WindowModalDialog, QtEventListener, Logger):
         self.submarine_we_send_label = IconLabel(text=_('You send')+':')
         self.submarine_we_send_label.setIcon(read_QIcon('lightning.png'))
         self.submarine_they_receive_label = IconLabel(text=_('They receive')+':')
-        self.submarine_they_receive_label.setIcon(read_QIcon('bitcoin.png'))
+        self.submarine_they_receive_label.setIcon(read_QIcon('scash.png'))
         h.addWidget(self.submarine_we_send_label, 0, 0)
         h.addWidget(self.submarine_lightning_send_amount_label, 0, 1)
         h.addWidget(self.submarine_they_receive_label, 1, 0)

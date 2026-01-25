@@ -1,4 +1,5 @@
 # Copyright (C) 2022 The Electrum developers
+# Copyright (C) 2025 The Electrum-Scash Developers
 # Distributed under the MIT software license, see the accompanying
 # file LICENCE or http://www.opensource.org/licenses/mit-license.php
 
@@ -28,7 +29,7 @@ from electrum.submarine_swaps import SwapServerError
 from electrum.fee_policy import FeePolicy, FixedFeePolicy
 from electrum.lnurl import LNURL3Data, request_lnurl_withdraw_callback, LNURLError
 
-from .amountedit import AmountEdit, BTCAmountEdit, SizedFreezableLineEdit
+from .amountedit import AmountEdit, SCASHAmountEdit, SizedFreezableLineEdit
 from .paytoedit import InvalidPaymentIdentifier
 from .util import (WaitingDialog, HelpLabel, MessageBoxMixin, EnterButton, char_width_in_lineedit,
                    get_icon_camera, read_QIcon, ColorScheme, IconLabel, Spinner, Buttons, WWLabel,
@@ -68,7 +69,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
         grid.setColumnStretch(3, 1)
 
         from .paytoedit import PayToEdit
-        self.amount_e = BTCAmountEdit(self.window.get_decimal_point)
+        self.amount_e = SCASHAmountEdit(self.window.get_decimal_point)
         self.payto_e = PayToEdit(self)
         msg = (_("Recipient of the funds.")
                + "\n\n"
@@ -286,9 +287,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
         mining_fee = tx.get_fee()
         mining_fee_str = self.format_amount_and_units(mining_fee)
         msg = _("Mining fee: {} (can be adjusted on next screen)").format(mining_fee_str)
-        if x_fee_amount:
-            twofactor_fee_str = self.format_amount_and_units(x_fee_amount)
-            msg += "\n" + _("2fa fee: {} (for the next batch of transactions)").format(twofactor_fee_str)
+
         frozen_bal = self.wallet.get_frozen_balance_str()
         if frozen_bal:
             msg += "\n" + _("Some coins are frozen: {} (can be unfrozen in the Addresses or in the Coins tab)").format(frozen_bal)
@@ -306,7 +305,6 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
             get_coins: Callable[..., Sequence[PartialTxInput]] = None,
             invoice: Optional[Invoice] = None
     ) -> None:
-        # trustedcoin requires this
         if run_hook('abort_send', self):
             return
 
@@ -925,7 +923,7 @@ class SendTab(QWidget, MessageBoxMixin, Logger):
 
         # Amount section
         amount_label = QLabel(_("Amount") + ":")
-        amount_edit = BTCAmountEdit(self.window.get_decimal_point, max_amount=max_amount)
+        amount_edit = SCASHAmountEdit(self.window.get_decimal_point, max_amount=max_amount)
         amount_edit.setAmount(max_amount)
         grid.addWidget(amount_label, row, 0)
         grid.addWidget(amount_edit, row, 1)

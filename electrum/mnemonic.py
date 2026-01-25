@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2014 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -233,7 +233,6 @@ class Mnemonic(Logger):
         num_words = len(seed.split())
         self.logger.info(f'{num_words} words')
         if (final_seed_type := calc_seed_type(seed)) != seed_type:
-            # note: I guess this can probabilistically happen for old "2fa" seeds that depend on the word count
             raise Exception(f"{final_seed_type=!r} does not match requested {seed_type=!r}. have {num_words=!r}")
         return seed
 
@@ -270,13 +269,7 @@ def calc_seed_type(x: str) -> str:
         return 'standard'
     elif is_new_seed(x, version.SEED_PREFIX_SW):
         return 'segwit'
-    elif is_new_seed(x, version.SEED_PREFIX_2FA) and (num_words == 12 or num_words >= 20):
-        # Note: in Electrum 2.7, there was a breaking change in key derivation
-        #       for this seed type. Unfortunately the seed version/prefix was reused,
-        #       and now we can only distinguish them based on number of words. :(
-        return '2fa'
-    elif is_new_seed(x, version.SEED_PREFIX_2FA_SW):
-        return '2fa_segwit'
+
     return ''
 
 
@@ -286,13 +279,7 @@ def can_seed_have_passphrase(seed: str) -> bool:
         raise Exception(f'unexpected seed type: {stype!r}')
     if stype == 'old':
         return False
-    if stype == '2fa':
-        # post-version-2.7 2fa seeds can have passphrase, but older ones cannot
-        num_words = len(seed.split())
-        if num_words == 12:
-            return True
-        else:
-            return False
+
     # all other types can have a seed extension/passphrase
     return True
 
@@ -301,5 +288,3 @@ def is_seed(x: str) -> bool:
     return bool(calc_seed_type(x))
 
 
-def is_any_2fa_seed_type(seed_type: str) -> bool:
-    return seed_type in ['2fa', '2fa_segwit']

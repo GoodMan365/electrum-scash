@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2011 Thomas Voegtlin
+# Copyright (C) 2025 The Electrum-Scash Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -45,7 +46,7 @@ from .bip32 import BIP32Node
 from .util import to_bytes, bfh, chunks, is_hex_str, parse_max_spend
 from .bitcoin import (
     TYPE_ADDRESS, TYPE_SCRIPT, hash_160, hash160_to_p2sh, hash160_to_p2pkh, hash_to_segwit_addr, var_int,
-    TOTAL_COIN_SUPPLY_LIMIT_IN_BTC, COIN, opcodes, base_decode, base_encode, construct_witness, construct_script,
+    TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH, COIN, opcodes, base_decode, base_encode, construct_witness, construct_script,
     taproot_tweak_seckey
 )
 from .crypto import sha256d, sha256
@@ -884,7 +885,7 @@ def parse_witness(vds: BCDataStream, txin: TxInput) -> None:
 
 def parse_output(vds: BCDataStream) -> TxOutput:
     value = vds.read_int64()
-    if value > TOTAL_COIN_SUPPLY_LIMIT_IN_BTC * COIN:
+    if value > TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH * COIN:
         raise SerializationError('invalid output amount (too large)')
     if value < 0:
         raise SerializationError('invalid output amount (negative)')

@@ -1,6 +1,6 @@
 import QtQuick
 
-import org.electrum
+import org.electrumscash
 
 import "../../../gui/qml/components/controls"
 

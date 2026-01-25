@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2015 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -306,7 +306,7 @@ class WalletDBUpgrader(Logger):
             self.put('wallet_type', 'standard')
             self.put('keystore', d)
 
-        elif (wallet_type == '2fa') or multisig_type(wallet_type):
+        elif multisig_type(wallet_type): #No 2FA allowed
             for key in xpubs.keys():
                 d = {
                     'type': 'bip32',
@@ -794,8 +794,8 @@ class WalletDBUpgrader(Logger):
             return
         PR_TYPE_ONCHAIN = 0
         PR_TYPE_LN = 2
-        from .bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_BTC, COIN
-        max_sats = TOTAL_COIN_SUPPLY_LIMIT_IN_BTC * COIN
+        from .bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH, COIN
+        max_sats = TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH * COIN
         requests = self.data.get('payment_requests', {})
         invoices = self.data.get('invoices', {})
         for d in [invoices, requests]:
@@ -1070,8 +1070,8 @@ class WalletDBUpgrader(Logger):
         # note: similar to convert_version_38
         if not self._is_upgrade_method_needed(53, 53):
             return
-        from .bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_BTC, COIN
-        max_sats = TOTAL_COIN_SUPPLY_LIMIT_IN_BTC * COIN
+        from .bitcoin import TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH, COIN
+        max_sats = TOTAL_COIN_SUPPLY_LIMIT_IN_SCASH * COIN
         requests = self.data.get('payment_requests', {})
         invoices = self.data.get('invoices', {})
         for d in [invoices, requests]:

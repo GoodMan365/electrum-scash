@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Electrum - lightweight Bitcoin client
+# Electrum-Scash - lightweight Scash client Forked From Electrum
 # Copyright (C) 2015-2024 Thomas Voegtlin
 #
 # Permission is hereby granted, free of charge, to any person
@@ -591,6 +591,9 @@ class Plugins(DaemonThread):
         base_name = ('electrum_external_plugins.' if self.is_external(name) else 'electrum.plugins.') + name
         if base_name not in sys.modules:
             metadata = self.get_metadata(name)
+            if metadata is None:        #Az
+                # Plugin not found or disabled, skip loading
+                return
             is_zip = metadata.get('is_zip', False)
             # if the plugin was not enabled on startup the init module hasn't been loaded yet
             if not is_zip:
@@ -608,6 +611,8 @@ class Plugins(DaemonThread):
             self.exec_module_from_spec(init_spec, base_name)
 
     def load_plugin_by_name(self, name: str) -> 'BasePlugin':
+        if name == 'trustedcoin':
+            return None  # or a dummy plugin object
         if name in self.plugins:
             return self.plugins[name]
         # if the plugin was not enabled on startup the init module hasn't been loaded yet

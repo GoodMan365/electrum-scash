@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -181,9 +181,7 @@ ElDialog {
                                 font.pixelSize: constants.fontSizeXLarge
                                 font.family: FixedFont
                                 font.bold: true
-                                text: invoice.invoiceType == Invoice.LightningInvoice
-                                    ? Config.formatMilliSats(invoice.amount, false)
-                                    : Config.formatSats(invoice.amount, false)
+                                text: Config.formatSats(invoice.amount, false)
                             }
 
                             Label {
@@ -225,7 +223,6 @@ ElDialog {
                                 Layout.preferredWidth: amountFontMetrics.advanceWidth('0') * 14 + leftPadding + rightPadding
                                 fiatfield: amountFiat
                                 readOnly: amountMax.checked
-                                msatPrecision: invoice.invoiceType == Invoice.LightningInvoice
                                 color: readOnly
                                     ? Material.accentColor
                                     : Material.foreground
@@ -305,162 +302,13 @@ ElDialog {
                     }
 
                 }
-
-                Heading {
-                    Layout.columnSpan: 2
-                    visible: invoice.invoiceType == Invoice.LightningInvoice
-                    text: qsTr('Technical properties')
-                }
-
-                Label {
-                    Layout.columnSpan: 2
-                    Layout.topMargin: constants.paddingSmall
-                    visible: invoice.invoiceType == Invoice.LightningInvoice
-                    text: qsTr('Remote Pubkey')
-                    color: Material.accentColor
-                }
-
-                TextHighlightPane {
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-
-                    visible: invoice.invoiceType == Invoice.LightningInvoice
-                    leftPadding: constants.paddingMedium
-
-                    RowLayout {
-                        width: parent.width
-                        Label {
-                            id: pubkeyLabel
-                            Layout.fillWidth: true
-                            text: 'pubkey' in invoice.lnprops ? invoice.lnprops.pubkey : ''
-                            font.family: FixedFont
-                            wrapMode: Text.Wrap
-                        }
-                        ToolButton {
-                            icon.source: '../../icons/share.png'
-                            icon.color: 'transparent'
-                            enabled: pubkeyLabel.text
-                            onClicked: {
-                                var dialog = app.genericShareDialog.createObject(app,
-                                    { title: qsTr('Node public key'), text: invoice.lnprops.pubkey }
-                                )
-                                dialog.open()
-                            }
-                        }
-                    }
-                }
-
-                Label {
-                    Layout.columnSpan: 2
-                    Layout.topMargin: constants.paddingSmall
-                    visible: invoice.invoiceType == Invoice.LightningInvoice
-                    text: qsTr('Payment hash')
-                    color: Material.accentColor
-                }
-
-                TextHighlightPane {
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-
-                    visible: invoice.invoiceType == Invoice.LightningInvoice
-                    leftPadding: constants.paddingMedium
-
-                    RowLayout {
-                        width: parent.width
-                        Label {
-                            id: paymenthashLabel
-                            Layout.fillWidth: true
-                            text: 'payment_hash' in invoice.lnprops ? invoice.lnprops.payment_hash : ''
-                            font.family: FixedFont
-                            wrapMode: Text.Wrap
-                        }
-                        ToolButton {
-                            icon.source: '../../icons/share.png'
-                            icon.color: 'transparent'
-                            enabled: paymenthashLabel.text
-                            onClicked: {
-                                var dialog = app.genericShareDialog.createObject(app, {
-                                    title: qsTr('Payment hash'),
-                                    text: invoice.lnprops.payment_hash
-                                })
-                                dialog.open()
-                            }
-                        }
-                    }
-                }
-
-                Label {
-                    Layout.columnSpan: 2
-                    Layout.topMargin: constants.paddingSmall
-                    visible: 'r' in invoice.lnprops && invoice.lnprops.r.length
-                    text: qsTr('Routing hints')
-                    color: Material.accentColor
-                }
-
-                Repeater {
-                    visible: 'r' in invoice.lnprops && invoice.lnprops.r.length
-                    model: invoice.lnprops.r
-
-                    TextHighlightPane {
-                        Layout.columnSpan: 2
-                        Layout.fillWidth: true
-
-                        RowLayout {
-                            width: parent.width
-
-                            Label {
-                                text: modelData.scid
-                            }
-                            Label {
-                                Layout.fillWidth: true
-                                text: modelData.node
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                    }
-                }
-
-                Label {
-                    Layout.columnSpan: 2
-                    Layout.topMargin: constants.paddingSmall
-                    visible: invoice.invoiceType == Invoice.LightningInvoice && invoice.address
-                    text: qsTr('Fallback address')
-                    color: Material.accentColor
-                }
-
-                TextHighlightPane {
-                    Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    visible: invoice.invoiceType == Invoice.LightningInvoice && invoice.address
-                    leftPadding: constants.paddingMedium
-
-                    RowLayout {
-                        width: parent.width
-                        Label {
-                            text: invoice.address
-                            font.family: FixedFont
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                        }
-                        ToolButton {
-                            icon.source: '../../icons/share.png'
-                            icon.color: 'transparent'
-                            onClicked: {
-                                var dialog = app.genericShareDialog.createObject(app, {
-                                    title: qsTr('Address'),
-                                    text: invoice.address
-                                })
-                                dialog.open()
-                            }
-                        }
-                    }
-                }
             }
         }
 
         ButtonContainer {
             Layout.fillWidth: true
-
+			Layout.columnSpan: 2
+			
             FlatButton {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
@@ -469,7 +317,7 @@ ElDialog {
                 enabled: !invoice.isSaved && invoice.canSave
                 onClicked: {
                     if (invoice.amount.isEmpty) {
-                        invoice.amountOverride = Config.unitsToSats(amountBtc.text)
+						invoice.amountOverride = Config.unitsToSats(amountBtc.text)
                         if (amountMax.checked)
                             invoice.amountOverride.isMax = true
                     }

@@ -557,7 +557,7 @@ class PaymentIdentifier(Logger):
             raise Exception("Amount is empty")
         if parse_max_spend(x):
             return x
-        p = pow(10, self.config.BTC_AMOUNTS_DECIMAL_POINT)
+        p = pow(10, self.config.SCASH_AMOUNTS_DECIMAL_POINT)
         try:
             return int(p * Decimal(x))
         except InvalidOperation:

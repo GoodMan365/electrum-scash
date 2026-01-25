@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Controls.Material
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -11,7 +11,7 @@ ElDialog {
     id: dialog
 
     title: qsTr('Trustedcoin')
-    iconSource: Qt.resolvedUrl('../../../plugins/trustedcoin/trustedcoin-status.png')
+    //iconSource: Qt.resolvedUrl('../../../plugins/trustedcoin/trustedcoin-status.png')
 
     property string otpauth
 

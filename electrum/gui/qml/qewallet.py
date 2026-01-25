@@ -78,7 +78,8 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
     otpFailed = pyqtSignal([str, str], arguments=['code', 'message'])
     peersUpdated = pyqtSignal()
     seedRetrieved = pyqtSignal()
-
+    #messageSigned = pyqtSignal([str], arguments=['signature'])  #Az
+    
     _network_signal = pyqtSignal(str, object)
 
     def __init__(self, wallet: 'Abstract_Wallet', parent=None):
@@ -96,15 +97,15 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
         self._invoiceModel = None
         self._channelModel = None
 
-        self._lightningbalance = QEAmount()
-        self._confirmedbalance = QEAmount()
-        self._unconfirmedbalance = QEAmount()
-        self._frozenbalance = QEAmount()
-        self._totalbalance = QEAmount()
-        self._lightningcanreceive = QEAmount()
-        self._minchannelfunding = QEAmount(amount_sat=int(MIN_FUNDING_SAT))
-        self._lightningcansend = QEAmount()
-        self._lightningbalancefrozen = QEAmount()
+        self._lightningbalance = QEAmount(amount_sat=0)
+        self._confirmedbalance = QEAmount(amount_sat=0)
+        self._unconfirmedbalance = QEAmount(amount_sat=0)
+        self._frozenbalance = QEAmount(amount_sat=0)
+        self._totalbalance = QEAmount(amount_sat=0)
+        self._lightningcanreceive = QEAmount(amount_sat=0)
+        self._minchannelfunding = QEAmount(amount_sat=0) #QEAmount(amount_sat=int(MIN_FUNDING_SAT))
+        self._lightningcansend = QEAmount(amount_sat=0)
+        self._lightningbalancefrozen = QEAmount(amount_sat=0)
 
         self._seed = ''
         self._seed_passphrase = ''
@@ -231,15 +232,17 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
 
     @event_listener
     def on_event_channel(self, wallet, channel):
-        if wallet == self.wallet:
-            self.balanceChanged.emit()
-            self.peersUpdated.emit()
+        if not self.wallet.can_have_lightning() or wallet != self.wallet:
+            return
+        self.balanceChanged.emit()
+        self.peersUpdated.emit()
 
     @event_listener
     def on_event_channels_updated(self, wallet):
-        if wallet == self.wallet:
-            self.balanceChanged.emit()
-            self.peersUpdated.emit()
+        if not self.wallet.can_have_lightning() or wallet != self.wallet:
+            return
+        self.balanceChanged.emit()
+        self.peersUpdated.emit()
 
     @qt_event_listener
     def on_event_payment_succeeded(self, wallet, key):
@@ -305,6 +308,11 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
             num_sent, num_answered = self.wallet.adb.get_history_sync_state_details()
             self.synchronizingProgress = \
                 ("{} ({}/{})".format(_("Synchronizing..."), num_answered, num_sent))
+            
+            # self.synchronizing = not self.wallet.is_up_to_date()
+        # else:
+            # self.synchronizingProgress = _("Not connected")
+            # self.synchronizing = True
 
     historyModelChanged = pyqtSignal()
     @pyqtProperty(QETransactionListModel, notify=historyModelChanged)
@@ -337,6 +345,8 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
     channelModelChanged = pyqtSignal()
     @pyqtProperty(QEChannelListModel, notify=channelModelChanged)
     def channelModel(self):
+        if not self.wallet.can_have_lightning():
+            return None
         if self._channelModel is None:
             self._channelModel = QEChannelListModel(self.wallet)
         return self._channelModel
@@ -354,9 +364,8 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
     billingInfoChanged = pyqtSignal()
     @pyqtProperty('QVariantMap', notify=billingInfoChanged)
     def billingInfo(self):
-        if self.wallet.wallet_type != '2fa':
-            return {}
-        return self.wallet.billing_info if self.wallet.billing_info is not None else {}
+        return {}
+
 
     @pyqtProperty(bool, notify=dataChanged)
     def canHaveLightning(self):
@@ -448,13 +457,11 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
 
     @pyqtProperty(bool, notify=dataChanged)
     def canSignWithoutServer(self):
-        return self.wallet.can_sign_without_server() if self.wallet.wallet_type == '2fa' else True
+        return True
 
     @pyqtProperty(bool, notify=dataChanged)
     def canSignWithoutCosigner(self):
         if isinstance(self.wallet, Multisig_Wallet):
-            if self.wallet.wallet_type == '2fa':  # 2fa is multisig, but it handles cosigning itself
-                return True
             return self.wallet.m == 1
         return True
 
@@ -530,6 +537,9 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
 
     @pyqtSlot()
     def enableLightning(self):
+        if not self.wallet.can_have_lightning():
+            self._logger.warning("Lightning is not supported for this wallet/network.")
+            return  # silently ignore
         self.wallet.init_lightning(password=self.password)
         self.isLightningChanged.emit()
         self.dataChanged.emit()
@@ -547,10 +557,7 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
         self.do_sign(tx, False, on_success, on_failure)
 
     def do_sign(self, tx, broadcast, on_success: Callable[[Transaction], None] = None, on_failure: Callable[[Optional[Any]], None] = None):
-        # tc_sign_wrapper is only used by 2fa. don't pass on_failure handler, it is handled via otpFailed signal
-        sign_hook = run_hook('tc_sign_wrapper', self.wallet, tx,
-                             partial(self.on_sign_complete, broadcast, on_success),
-                             partial(self.on_sign_failed, None))
+
         try:
             # ignore_warnings=True, because UI checks and asks user confirmation itself
             tx = self.wallet.sign_transaction(tx, self.password, ignore_warnings=True)
@@ -566,10 +573,10 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
                 on_failure()
             return
 
-        if sign_hook:
-            self._logger.debug('plugin needs to sign tx too')
-            sign_hook(tx)
-            return
+        # if sign_hook:
+            # self._logger.debug('plugin needs to sign tx too')
+            # sign_hook(tx)
+            # return
 
         txid = tx.txid()
         self._logger.debug(f'do_sign(), txid={txid}')
@@ -587,29 +594,29 @@ class QEWallet(AuthMixin, QObject, QtEventListener):
         if on_success:
             on_success(tx)
 
-    # this assumes a 2fa wallet, but there are no other tc_sign_wrapper hooks, so that's ok
-    def on_sign_complete(self, broadcast, cb: Callable[[Transaction], None] = None, tx: Transaction = None):
-        self.otpSuccess.emit()
-        if cb:
-            cb(tx)
-        if broadcast:
-            self.broadcast(tx)
+    # # this assumes a 2fa wallet, but there are no other tc_sign_wrapper hooks, so that's ok
+    # def on_sign_complete(self, broadcast, cb: Callable[[Transaction], None] = None, tx: Transaction = None):
+        # self.otpSuccess.emit()
+        # if cb:
+            # cb(tx)
+        # if broadcast:
+            # self.broadcast(tx)
 
-    # this assumes a 2fa wallet, but there are no other tc_sign_wrapper hooks, so that's ok
-    def on_sign_failed(self, cb: Callable[[], None] = None, error: str = None):
-        self.otpFailed.emit('error', error)
-        if cb:
-            cb()
+    # # this assumes a 2fa wallet, but there are no other tc_sign_wrapper hooks, so that's ok
+    # def on_sign_failed(self, cb: Callable[[], None] = None, error: str = None):
+        # self.otpFailed.emit('error', error)
+        # if cb:
+            # cb()
 
-    def request_otp(self, on_submit):
-        self._otp_on_submit = on_submit
-        self.otpRequested.emit()
+    # def request_otp(self, on_submit):
+        # self._otp_on_submit = on_submit
+        # self.otpRequested.emit()
 
-    @pyqtSlot(str)
-    def submitOtp(self, otp):
-        def submit_otp_task():
-            self._otp_on_submit(otp)
-        threading.Thread(target=submit_otp_task, daemon=True).start()
+    # @pyqtSlot(str)
+    # def submitOtp(self, otp):
+        # def submit_otp_task():
+            # self._otp_on_submit(otp)
+        # threading.Thread(target=submit_otp_task, daemon=True).start()
 
     def broadcast(self, tx):
         assert tx.is_complete()

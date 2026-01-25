@@ -12,7 +12,7 @@ from electrum.lntransport import extract_nodeid, ConnStringFormatError
 
 from .util import (WindowModalDialog, Buttons, OkButton, CancelButton,
                    EnterButton, WWLabel, char_width_in_lineedit)
-from .amountedit import BTCAmountEdit
+from .amountedit import SCASHAmountEdit
 from .my_treeview import create_toolbar_with_menu
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class NewChannelDialog(WindowModalDialog):
             # index 1 is "Electrum trampoline" on mainnet, this defaults to -1 if 1 is not available
             self.trampoline_combo.setCurrentIndex(1)
             self.trampoline_combo.currentIndexChanged.connect(self.maybe_enable_ok_button)
-        self.amount_e = BTCAmountEdit(self.window.get_decimal_point)
+        self.amount_e = SCASHAmountEdit(self.window.get_decimal_point)
         self.amount_e.setAmount(amount_sat)
         self.amount_e.textChanged.connect(self.maybe_enable_ok_button)
 

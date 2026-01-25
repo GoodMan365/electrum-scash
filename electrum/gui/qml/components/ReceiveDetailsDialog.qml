@@ -4,7 +4,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQml.Models
 
-import org.electrum 1.0
+import org.electrumscash 1.0
 
 import "controls"
 
@@ -97,16 +97,18 @@ ElDialog {
 
         GridLayout {
             width: parent.width
-	    columns: 2
+			columns: Daemon.currentWallet.canHaveLightning ? 2 : 1  // ← dynamic columns
+	    //columns: 2
 
             FlatButton {
                 Layout.fillWidth: true
                 text: qsTr('Onchain')
-                icon.source: '../../icons/bitcoin.png'
+                icon.source: '../../icons/scash.png'
                 onClicked: { dialog.isLightning = false; doAccept() }
             }
             FlatButton {
                 Layout.fillWidth: true
+				visible: Daemon.currentWallet.canHaveLightning
                 enabled: Daemon.currentWallet.isLightning && (Daemon.currentWallet.lightningCanReceive.satsInt
                             > amountBtc.textAsSats.satsInt || Daemon.currentWallet.canGetZeroconfChannel)
                 text: qsTr('Lightning')
