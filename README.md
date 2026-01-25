@@ -1,8 +1,11 @@
 # Electrum-Scash - Lightweight Scash client
 
 Licence: MIT Licence
+
 Author: GoodMan365 (forked for Scash)
+
 Language: Python (>= 3.10)
+
 Homepage: https://github.com/GoodMan365/electrum-scash  
 
 
