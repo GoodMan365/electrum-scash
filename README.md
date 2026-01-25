@@ -1,132 +1,60 @@
-# Electrum - Lightweight Bitcoin client
+# Electrum-Scash - Lightweight Scash client
 
-```
 Licence: MIT Licence
-Original Author: Thomas Voegtlin
-Current Maintainer: GoodMan365
+Author: GoodMan365 (forked for Scash)
 Language: Python (>= 3.10)
-Homepage: https://electrum.org/
-```
+Homepage: https://github.com/GoodMan365/electrum-scash  
 
-[![Build Status](https://api.cirrus-ci.com/github/spesmilo/electrum.svg?branch=master)](https://cirrus-ci.com/github/spesmilo/electrum)
-[![Test coverage statistics](https://coveralls.io/repos/github/spesmilo/electrum/badge.svg?branch=master)](https://coveralls.io/github/spesmilo/electrum?branch=master)
-[![Help translate Electrum online](https://d322cqt584bo4o.cloudfront.net/electrum/localized.svg)](https://crowdin.com/project/electrum)
 
-Electrum-Scash is forked from Electrum and added support for Scash (a bitcoin fork altcoin) while removed bitcoin support.
+Electrum-Scash is forked from Electrum and added support for Scash (a bitcoin fork) while removed bitcoin support.
+
 
 ## Getting started
 
-Electrum-Scash itself is pure Python, and so are most of the required dependencies,
-but not everything. The following sections describe how to run from source, but here
-is a TL;DR:
+_(If you're looking to simply run Electrum-Scash, download it from the [Releases page](https://github.com/GoodMan365/electrum-scash/releases).)_
 
-```
-$ sudo apt-get install libsecp256k1-dev
+Electrum-Scash is a fork of Electrum, modified to work with the **Scash blockchain**. It removes Lightning Network and TrustedCoin/2FA support, and includes Scash-specific chain parameters.
+
+
+### TL;DR - Quick Install
+```bash
+$ sudo apt-get install libsecp256k1-dev python3-pyqt6 python3-cryptography
 $ ELECTRUM_ECC_DONT_COMPILE=1 python3 -m pip install --user ".[gui,crypto]"
 ```
-
-### Not pure-python dependencies
-
+### Dependencies
 #### Qt GUI
-
-If you want to use the Qt interface, install the Qt dependencies:
-```
+```bash
+For the desktop interface:
 $ sudo apt-get install python3-pyqt6
 ```
 
-#### libsecp256k1
+####libsecp256k1
+Required for elliptic curve operations:
 
-For elliptic curve operations,
-[libsecp256k1](https://github.com/bitcoin-core/secp256k1)
-is a required dependency.
-
-If you "pip install" Electrum, by default libsecp will get compiled locally,
-as part of the `electrum-ecc` dependency. This can be opted-out of,
-by setting the `ELECTRUM_ECC_DONT_COMPILE=1` environment variable.
-For the compilation to work, besides a C compiler, you need at least:
-```
-$ sudo apt-get install automake libtool
-```
-If you opt out of the compilation, you need to provide libsecp in another way, e.g.:
-```
+```bash
 $ sudo apt-get install libsecp256k1-dev
 ```
 
 #### cryptography
+For fast symmetric ciphers:
 
-Due to the need for fast symmetric ciphers,
-[cryptography](https://github.com/pyca/cryptography) is required.
-Install from your package manager (or from pip):
-```
+```bash
 $ sudo apt-get install python3-cryptography
 ```
 
-#### hardware-wallet support
+### Running from source
+#### From tar.gz
 
-If you would like hardware wallet support,
-[see this](https://github.com/spesmilo/electrum-docs/blob/master/hardware-linux.rst).
-
-
-### Running from tar.gz
-
-If you downloaded the official package (tar.gz), you can run
-Electrum from its root directory without installing it on your
-system; all the pure python dependencies are included in the 'packages'
-directory. To run Electrum from its root directory, just do:
+If you downloaded the official package:
+```bash
+$ ./run_electrum-scash
 ```
-$ ./run_electrum
-```
-
-You can also install Electrum on your system, by running this command:
-```
-$ sudo apt-get install python3-setuptools python3-pip
-$ python3 -m pip install --user .
-```
-
-This will download and install the Python dependencies used by
-Electrum instead of using the 'packages' directory.
-It will also place an executable named `electrum` in `~/.local/bin`,
-so make sure that is on your `PATH` variable.
-
-
-### Development version (git clone)
-
-_(For OS-specific instructions, see [here for Windows](contrib/build-wine/README_windows.md),
-and [for macOS](contrib/osx/README_macos.md))_
-
-Check out the code from GitHub:
-```
-$ git clone https://github.com/spesmilo/electrum.git
-$ cd electrum
+### From Git Development
+```bash$ git clone https://github.com/GoodMan365/electrum-scash.git
+$ cd electrum-scash
 $ git submodule update --init
-```
-
-Run install (this should install dependencies):
-```
 $ python3 -m pip install --user -e .
-```
-
-Create translations (optional):
-```
-$ sudo apt-get install gettext
-$ ./contrib/locale/build_locale.sh electrum/locale/locale electrum/locale/locale
-```
-
-Finally, to start Electrum:
-```
-$ ./run_electrum
-```
-
-### Run tests
-
-Run unit tests with `pytest`:
-```
-$ pytest tests -v
-```
-
-To run a single file, specify it directly like this:
-```
-$ pytest tests/test_bitcoin.py -v
+$ ./run_electrum-scash
 ```
 
 ## Creating Binaries
@@ -137,28 +65,33 @@ $ pytest tests/test_bitcoin.py -v
 - [Windows](contrib/build-wine/README.md)
 - [Android](contrib/android/Readme.md)
 
+### Key Differences from Electrum
 
+    #### Scash blockchain support (mainnet only)
+    #### No Lightning Network (completely removed, support comming soon)
+    #### No TrustedCoin/2FA (completely removed)
+    🎨 Scash branding (icons, app name, URI scheme)
+    📱 Android intent filter for scash: URIs
+	
 ## Contributing
 
-Any help testing the software, reporting or fixing bugs, reviewing pull requests
-and recent changes, writing tests, or helping with outstanding issues is very welcome.
-Implementing new features, or improving/refactoring the codebase, is of course
-also welcome, but to avoid wasted effort, especially for larger changes,
-we encourage discussing these on the issue tracker or IRC first.
+Bug reports, testing, and documentation improvements are welcome! Since this is a specialized fork, major feature additions should be discussed first.
 
-Besides [GitHub](https://github.com/spesmilo/electrum),
-most communication about Electrum development happens on IRC, in the
-`#electrum` channel on Libera Chat. The easiest way to participate on IRC is
-with the web client, [web.libera.chat](https://web.libera.chat/#electrum).
+Most communication happens via GitHub Issues and discord: https://discord.gg/jsfwttTd
 
-Please improve translations on [Crowdin](https://crowdin.com/project/electrum).
+## Security & Verification
 
+####Releases are signed by:
+```bash
+514E 2707 7335 D13C EB12  35AF 7EC4 35BF 9FCD F13C
+Electrum-Scash GoodMan365
+```
 
-Releases are signed by:
+### To verify releases:
+```bash
+gpg --import contrib/pubkeys/electrum-scash.asc
+gpg --verify Electrum-Scash-*.AppImage.asc
+```
 
-    514E 2707 7335 D13C EB12  35AF 7EC4 35BF 9FCD F13C
-    Electrum-Scash <azhar.isn@proton.me>
-
-To verify:
-    gpg --import contrib/pubkeys/electrum-scash.asc
-    gpg --verify Electrum-Scash-*.AppImage.asc
+Electrum-Scash is not affiliated with the original Electrum project. Use at your own risk.
+This README clearly communicates that this is a **Scash-specific fork** while maintaining Electrum's professional tone.
