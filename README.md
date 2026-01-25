@@ -2,7 +2,8 @@
 
 ```
 Licence: MIT Licence
-Author: Thomas Voegtlin
+Original Author: Thomas Voegtlin
+Current Maintainer: GoodMan365
 Language: Python (>= 3.10)
 Homepage: https://electrum.org/
 ```
@@ -11,13 +12,11 @@ Homepage: https://electrum.org/
 [![Test coverage statistics](https://coveralls.io/repos/github/spesmilo/electrum/badge.svg?branch=master)](https://coveralls.io/github/spesmilo/electrum?branch=master)
 [![Help translate Electrum online](https://d322cqt584bo4o.cloudfront.net/electrum/localized.svg)](https://crowdin.com/project/electrum)
 
+Electrum-Scash is forked from Electrum and added support for Scash (a bitcoin fork altcoin) while removed bitcoin support.
 
 ## Getting started
 
-_(If you've come here looking to simply run Electrum,
-[you may download it here](https://electrum.org/#download).)_
-
-Electrum itself is pure Python, and so are most of the required dependencies,
+Electrum-Scash itself is pure Python, and so are most of the required dependencies,
 but not everything. The following sections describe how to run from source, but here
 is a TL;DR:
 
