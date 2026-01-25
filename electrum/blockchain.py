@@ -61,19 +61,6 @@ class InvalidHeader(Exception):
     pass
 
 
-# def serialize_header(header_dict: dict) -> bytes:
-#     """Serialize SCASH 112-byte header."""
-#     s = (
-#         int.to_bytes(header_dict['version'], length=4, byteorder="little", signed=False)
-#         + bfh(header_dict['prev_block_hash'])[::-1]
-#         + bfh(header_dict['merkle_root'])[::-1]
-#         + int.to_bytes(int(header_dict['timestamp']), length=4, byteorder="little", signed=False)
-#         + int.to_bytes(int(header_dict['bits']), length=4, byteorder="little", signed=False)
-#         + int.to_bytes(int(header_dict['nonce']), length=4, byteorder="little", signed=False)
-#         + bfh(header_dict['hashRandomX'])[::-1]  # 32-byte RandomX hash
-#     )
-#     assert len(s) == HEADER_SIZE
-#     return s
 
 
 def serialize_header(header_dict: dict) -> bytes:
@@ -87,29 +74,22 @@ def serialize_header(header_dict: dict) -> bytes:
         else:
             return value.to_bytes(4, 'little')
     
-    # Version (4 bytes, little-endian)
+
     version_bytes = to_le_bytes(header_dict['version'])
     
-    # Prev hash (32 bytes) - display → storage
     prev_hash_bytes = bytes.fromhex(header_dict['prev_block_hash'])[::-1]
     
-    # Merkle root (32 bytes) - display → storage
     merkle_bytes = bytes.fromhex(header_dict['merkle_root'])[::-1]
     
-    # Timestamp (4 bytes, little-endian)
     time_bytes = to_le_bytes(header_dict['timestamp'])
     
-    # Bits (4 bytes, little-endian)
     bits_bytes = to_le_bytes(header_dict['bits'])
     
-    # Nonce (4 bytes, little-endian)
     nonce_bytes = to_le_bytes(header_dict['nonce'])
     
-    # hashRandomX (32 bytes) - display → storage
     rx_hex = header_dict.get('hashRandomX', '00' * 32)
     randomx_bytes = bytes.fromhex(rx_hex)[::-1]
     
-    # Combine: 4 + 32 + 32 + 4 + 4 + 4 + 32 = 112 bytes
     result = (version_bytes + prev_hash_bytes + merkle_bytes + 
               time_bytes + bits_bytes + nonce_bytes + randomx_bytes)
     
@@ -123,22 +103,18 @@ def deserialize_header(s: bytes, height: int) -> dict:
     if len(s) != 112:  # Use constant HEADER_SIZE if defined
         raise InvalidHeader(f'Invalid header length: {len(s)} (expected 112)')
     
-    # Unpack: version(4), prev_hash(32), merkle_root(32), timestamp(4), bits(4), nonce(4), hashRandomX(32)
-    # '<I' = little-endian unsigned int (4 bytes)
-    # '32s' = 32-byte string (raw bytes)
     version, prev_hash, merkle_root, timestamp, bits, nonce, hash_randomx = struct.unpack(
         '<I32s32sIII32s', s
     )
     
-    # Convert to display format for dict
     return {
         'version': version,
-        'prev_block_hash': prev_hash[::-1].hex(),  # storage → display
-        'merkle_root': merkle_root[::-1].hex(),    # storage → display
+        'prev_block_hash': prev_hash[::-1].hex(),
+        'merkle_root': merkle_root[::-1].hex(),
         'timestamp': timestamp,
         'bits': bits,
         'nonce': nonce,
-        'hashRandomX': hash_randomx[::-1].hex(),   # storage → display
+        'hashRandomX': hash_randomx[::-1].hex(),
         'block_height': height,
     }
 
@@ -162,91 +138,33 @@ def hash_raw_header(header: bytes) -> str:
     return hash_encode(sha256d(header))
 
 
-# def compute_commitment(header_dict: dict) -> str:
-    # """
-    # Compute Scash RandomX commitment for block validation.
-    
-    # Args:
-        # header_dict: Dictionary with header fields:
-            # - version: int
-            # - prev_block_hash: str (hex, display format)
-            # - merkle_root: str (hex, display format) 
-            # - timestamp: int
-            # - bits: int
-            # - nonce: int
-            # - hashRandomX: str (hex, display format from RPC)
-    
-    # Returns:
-        # Commitment hash as hex string in DISPLAY format
-    # """
-    # import hashlib
-    
-    # # 1. Convert hashRandomX from DISPLAY to STORAGE format
-    # rx_display = header_dict['hashRandomX']
-    # rx_storage = bytes.fromhex(rx_display)[::-1]
-    
-    # # 2. Serialize header with zeroed hashRandomX
-    # header_zeroed = {
-        # 'version': header_dict['version'],
-        # 'prev_block_hash': header_dict['prev_block_hash'],
-        # 'merkle_root': header_dict['merkle_root'],
-        # 'timestamp': header_dict['timestamp'],
-        # 'bits': header_dict['bits'],
-        # 'nonce': header_dict['nonce'],
-        # 'hashRandomX': '00' * 32,  # Zeroed
-    # }
-    
-    # header_bytes = serialize_header(header_zeroed)
-    
-    # # 3. Compute Blake2b-256(header_zeroed || rx_storage)
-    # blake = hashlib.blake2b(digest_size=32)
-    # blake.update(header_bytes)
-    # blake.update(rx_storage)
-    
-    # # 4. Convert result to DISPLAY format
-    # commitment_storage = blake.digest()
-    # commitment_display = commitment_storage[::-1].hex()
-    
-    # return commitment_display
 def compute_commitment(header_dict: dict) -> bytes:
     """Correct Scash RandomX commitment."""
-    # 1. Get hashRandomX in STORAGE format
     rx_display = header_dict['hashRandomX']
     rx_storage = bytes.fromhex(rx_display)[::-1]  # Display → Storage
     
-    # 2. Serialize header with zeroed hashRandomX
     header_zeroed = header_dict.copy()
     header_zeroed['hashRandomX'] = '00' * 32
     header_bytes_zeroed = serialize_header(header_zeroed)
     
-    # 3. Compute Blake2b-256(header_zeroed || rx_storage)
     blake = hashlib.blake2b(digest_size=32)
     blake.update(header_bytes_zeroed)
     blake.update(rx_storage)
     
-    # 4. Return in DISPLAY format
     return blake.digest()[::-1]
     
 def commitment_meets_target(commitment: bytes, target: int) -> bool:
     """Check if commitment meets target."""
-    # Commitment is in DISPLAY format from compute_commitment
     cm_int = int.from_bytes(commitment, byteorder='big')
     return cm_int <= target
     
-# def commitment_meets_target(commitment_hex: str, target: int) -> bool:
-    # """Check if commitment meets target."""
-    # # Commitment hex is in DISPLAY format
-    # cm_int = int(commitment_hex, 16)
-    # return cm_int <= target
-    
+   
 
 pow_hash_header = hash_header
 
 
-# key: blockhash hex at forkpoint
-# the chain at some key is the best chain that includes the given hash
-blockchains = {}  # type: Dict[str, Blockchain]
-blockchains_lock = threading.RLock()  # lock order: take this last; so after Blockchain.lock
+blockchains = {}
+blockchains_lock = threading.RLock()  
 
 
 def read_blockchains(config: 'SimpleConfig'):
@@ -256,15 +174,12 @@ def read_blockchains(config: 'SimpleConfig'):
                             forkpoint_hash=constants.net.GENESIS,
                             prev_hash=None)
     blockchains[constants.net.GENESIS] = best_chain
-    # consistency checks
-    # consistency checks - MODIFIED to preserve headers beyond checkpoints
     max_cp = constants.net.max_checkpoint()
     chain_height = best_chain.height()
     
     if chain_height > max_cp:
         _logger.info((f"[blockchain] Chain extends beyond checkpoints: height={chain_height}, max_checkpoint={max_cp}"))
         
-        # Don't delete the file, just verify checkpoint if possible
         header_at_cp = best_chain.read_header(max_cp)
         if header_at_cp:
             # Optional: verify checkpoint hash
@@ -285,11 +200,9 @@ def read_blockchains(config: 'SimpleConfig'):
         forkpoint = int(forkpoint)
         prev_hash = (64-len(prev_hash)) * "0" + prev_hash  # left-pad with zeroes
         first_hash = (64-len(first_hash)) * "0" + first_hash
-        # forks below the max checkpoint are not allowed
         if forkpoint <= constants.net.max_checkpoint():
             delete_chain(filename, "deleting fork below max checkpoint")
             return
-        # find parent (sorting by forkpoint guarantees it's already instantiated)
         for parent in blockchains.values():
             if parent.check_hash(forkpoint - 1, prev_hash):
                 break
@@ -321,7 +234,6 @@ def get_best_chain() -> 'Blockchain':
     return blockchains[constants.net.GENESIS]
 
 
-# block hash -> chain work; up to and including that block
 _CHAINWORK_CACHE = {
     "0000000000000000000000000000000000000000000000000000000000000000": 0,  # virtual block at height -1
 }  # type: Dict[str, int]
@@ -333,7 +245,6 @@ def init_headers_file_for_best_chain():
     b = get_best_chain()
     filename = b.path()
     
-    # If file exists, preserve it
     if os.path.exists(filename) and os.path.getsize(filename) > 0:
         current_size = os.path.getsize(filename)
         headers_count = current_size // HEADER_SIZE
@@ -341,25 +252,22 @@ def init_headers_file_for_best_chain():
             b.update_size()
         return
     
-    # File doesn't exist - create empty file
     open(filename, 'wb').close()
     
     with b.lock:
         b.update_size()
     
-    # Optional: Pre-allocate space for checkpoints for faster sync
     if constants.net.CHECKPOINTS:
         checkpoint_len = len(constants.net.CHECKPOINTS)
         checkpoint_headers = (checkpoint_len-1) * 2016
         checkpoint_size = checkpoint_headers * HEADER_SIZE
-        # Extend file to checkpoint size (makes sync faster)
+
         with open(filename, 'rb+') as f:
             f.seek(checkpoint_size - 1)
             f.write(b'\x00')
         
 def _init_headers_file(self):
     """Initialize the headers file with the genesis header."""
-    # Check if we already have the genesis header
     existing = self.read_header(0)
     if existing is not None:
         return
@@ -399,29 +307,23 @@ class Blockchain(Logger):
                  forkpoint_hash: str, prev_hash: Optional[str]):
         assert isinstance(forkpoint_hash, str) and len(forkpoint_hash) == 64, forkpoint_hash
         assert (prev_hash is None) or (isinstance(prev_hash, str) and len(prev_hash) == 64), prev_hash
-        # assert (parent is None) == (forkpoint == 0)
         if 0 < forkpoint <= constants.net.max_checkpoint():
             raise Exception(f"cannot fork below max checkpoint. forkpoint: {forkpoint}")
         Logger.__init__(self)
         self.config = config
-        self.forkpoint = forkpoint  # height of first header
+        self.forkpoint = forkpoint  
         self.parent = parent
-        self._forkpoint_hash = forkpoint_hash  # blockhash at forkpoint. "first hash"
-        self._prev_hash = prev_hash  # blockhash immediately before forkpoint
+        self._forkpoint_hash = forkpoint_hash  
+        self._prev_hash = prev_hash  
         self.lock = threading.RLock()
         self.update_size()
 
         if self.checkpoints and len(self.checkpoints) > 0:
-            # Show first and last checkpoints
-            
-            # Calculate what height the last checkpoint represents
             last_checkpoint_height = (len(self.checkpoints) - 1) * 2016
             
-            # Verify genesis
             if isinstance(self.checkpoints[0], (list, tuple)) and len(self.checkpoints[0]) > 0:
                 checkpoint_genesis = self.checkpoints[0][0]
         
-        # Convert checkpoints list to dict for easier access
         self.checkpoint_dict = {}
         for i, (hash_val, chainwork) in enumerate(self.checkpoints):
             height = i * 2016
@@ -430,10 +332,7 @@ class Blockchain(Logger):
         if 0 in self.checkpoint_dict:
             genesis_hash, _ = self.checkpoint_dict[0]
         
-        # Calculate expected tip from checkpoints
         max_checkpoint_height = (len(self.checkpoints) - 1) * 2016
-
-        #self.analyze_sync_strategy()
 
     @property
     def checkpoints(self):
@@ -498,24 +397,6 @@ class Blockchain(Logger):
         except Exception:
             return False
 
-    # def fork(parent, header: dict) -> 'Blockchain':
-    #     if not parent.can_connect(header, check_height=False):
-    #         raise Exception("forking header does not connect to parent chain")
-    #     forkpoint = header.get('block_height')
-    #     self = Blockchain(config=parent.config,
-    #                       forkpoint=forkpoint,
-    #                       parent=parent,
-    #                       forkpoint_hash=hash_header(header),
-    #                       prev_hash=parent.get_hash(forkpoint-1))
-    #     self.assert_headers_file_available(parent.path())
-    #     open(self.path(), 'w+').close()
-    #     self.save_header(header)
-    #     # put into global dict. note that in some cases
-    #     # save_header might have already put it there but that's OK
-    #     chain_id = self.get_id()
-    #     with blockchains_lock:
-    #         blockchains[chain_id] = self
-    #     return self
 
     def fork(parent, header: dict) -> 'Blockchain':
         """Create a new blockchain that forks from parent at header."""
@@ -590,13 +471,11 @@ class Blockchain(Logger):
         self.logger.info("SYNC STRATEGY ANALYSIS")
         self.logger.info("="*70)
         
-        # 1. Current local state
         local_height = self.height() if self.height() is not None else -1
         self.logger.info(f"1. Local chain:")
         self.logger.info(f"   Height: {local_height}")
         self.logger.info(f"   Forkpoint: {self.forkpoint}")
         
-        # 2. Checkpoints
         self.logger.info(f"\n2. Checkpoints:")
         self.logger.info(f"   Number of checkpoints: {len(self.checkpoints)}")
         
@@ -607,7 +486,6 @@ class Blockchain(Logger):
             
             self.logger.info(f"   Last checkpoint: height={last_checkpoint_height}, hash={last_checkpoint_hash}")
             
-            # 3. Determine sync strategy
             self.logger.info(f"\n3. Recommended sync strategy:")
             
             if local_height < 0:
@@ -639,7 +517,6 @@ class Blockchain(Logger):
                 self._size = 0
                 return
                 
-            # SIMPLE: I am using file size
             file_size = os.path.getsize(p)
             headers_count = file_size // HEADER_SIZE
             
@@ -676,18 +553,15 @@ class Blockchain(Logger):
     def _verify_header(cls, header: dict, prev_hash: str, target: int, expected_header_hash: str = None) -> None:
         height = header.get('block_height', 0)
 
-        # 1. Verify block hash and prev_hash
         _hash = hash_header(header)
         if expected_header_hash and expected_header_hash != _hash:
             raise InvalidHeader("hash mismatch")
             
-        # 2. Skip prev_hash check if None (checkpoint sync case)
         if prev_hash is not None and prev_hash != header.get('prev_block_hash'):
             raise InvalidHeader("prev hash mismatch")
 
         if height % 2016 == 0:
             checkpoint_index = height // 2016
-            # Access checkpoints through the class
             if checkpoint_index < len(constants.net.CHECKPOINTS):
                 checkpoint_data = constants.net.CHECKPOINTS[checkpoint_index]
                 if isinstance(checkpoint_data, (list, tuple)) and len(checkpoint_data) > 0:
@@ -707,10 +581,9 @@ class Blockchain(Logger):
             traceback.print_exc()
             raise InvalidHeader(f"commitment validation failed: {e}")
 
-        # 4. Optionally verify bits field todo
         expected_bits = cls.target_to_bits(target)
         if header.get('bits') != expected_bits:
-            # Optional warning todo
+            # todo
             pass
 
             
@@ -719,35 +592,28 @@ class Blockchain(Logger):
         num = len(data) // HEADER_SIZE
         start_height = index * CHUNK_SIZE
         
-        # Get target for this chunk
-        target = self.get_target(index-1)  # Target from PREVIOUS chunk
+        target = self.get_target(index-1)
         
         try:
-            # Special handling for first chunk after checkpoint
             if start_height % 2016 == 0 and start_height > 0:
-                # We may not have previous header if syncing from checkpoint
                 try:
                     prev_hash = self.get_hash(start_height - 1)
                 except MissingHeader:
                     prev_hash = None
             else:
-                # Normal case
                 prev_hash = self.get_hash(start_height - 1)
             
-            # Verify each header
             for i in range(num):
                 height = start_height + i
                 
                 raw_header = data[i*HEADER_SIZE:(i+1)*HEADER_SIZE]
                 header = deserialize_header(raw_header, height)
                 
-                # Skip prev_hash check for first header in checkpoint sync
                 if i == 0 and prev_hash is None:
                     self.verify_header(header, None, target, None)
                 else:
                     self.verify_header(header, prev_hash, target, None)
                 
-                # Check if header already exists (checkpoint case)
                 existing_header = self.read_header(height)
                 if existing_header:
                     existing_hash = hash_header(existing_header)
@@ -760,7 +626,6 @@ class Blockchain(Logger):
                         self.logger.info(f"    New:      {new_hash[:16]}...")
                         raise InvalidHeader(f"Header mismatch at height {height}")
                 else:
-                    # Save the header (pass the dict, not raw bytes!)
                     self.save_header(header)  # Pass header dict, not raw_header bytes!
                 prev_hash = hash_header(header)
             
@@ -788,7 +653,6 @@ class Blockchain(Logger):
         assert index >= 0, index
         chunk_within_checkpoint_region = index < len(constants.net.CHECKPOINTS)
         
-        # chunks in checkpoint region are the responsibility of the 'main chain'
         if chunk_within_checkpoint_region and self.parent is not None:
             main_chain = get_best_chain()
             main_chain.save_chunk(index, chunk)
@@ -801,8 +665,6 @@ class Blockchain(Logger):
             chunk = chunk[-delta_bytes:]
             delta_bytes = 0
         
-        # MODIFIED: Never truncate when saving chunks
-        # This prevents losing headers beyond checkpoints
         truncate = False
         
         self.write(chunk, delta_bytes, truncate)
@@ -811,17 +673,14 @@ class Blockchain(Logger):
 
     def swap_with_parent(self) -> None:
         with self.lock, blockchains_lock:
-            # do the swap; possibly multiple ones
             cnt = 0
             while True:
                 old_parent = self.parent
                 if not self._swap_with_parent():
                     break
-                # make sure we are making progress
                 cnt += 1
                 if cnt > len(blockchains):
                     raise Exception(f'swapping fork with parent too many times: {cnt}')
-                # we might have become the parent of some of our former siblings
                 for old_sibling in old_parent.get_direct_children():
                     if self.check_hash(old_sibling.forkpoint - 1, old_sibling._prev_hash):
                         old_sibling.parent = self
@@ -841,9 +700,6 @@ class Blockchain(Logger):
         parent = self.parent  # type: Optional[Blockchain]
         child_old_id = self.get_id()
         parent_old_id = parent.get_id()
-        # swap files
-        # child takes parent's name
-        # parent's new name will be something new (not child's old name)
         self.assert_headers_file_available(self.path())
         child_old_name = self.path()
         with open(self.path(), 'rb') as f:
@@ -856,16 +712,13 @@ class Blockchain(Logger):
             parent_data = f.read(parent_branch_size*HEADER_SIZE)
         self.write(parent_data, 0)
         parent.write(my_data, (forkpoint - parent.forkpoint)*HEADER_SIZE)
-        # swap parameters
         self.parent, parent.parent = parent.parent, self  # type: Optional[Blockchain], Optional[Blockchain]
         self.forkpoint, parent.forkpoint = parent.forkpoint, self.forkpoint
         self._forkpoint_hash, parent._forkpoint_hash = parent._forkpoint_hash, hash_raw_header(parent_data[:HEADER_SIZE])
         self._prev_hash, parent._prev_hash = parent._prev_hash, self._prev_hash
-        # parent's new name
         os.replace(child_old_name, parent.path())
         self.update_size()
         parent.update_size()
-        # update pointers
         blockchains.pop(child_old_id, None)
         blockchains.pop(parent_old_id, None)
         blockchains[self.get_id()] = self
@@ -887,21 +740,14 @@ class Blockchain(Logger):
     @with_lock
     def write(self, data: bytes, pos: int, truncate=True) -> None:
         """Write header data at position pos (header index, not bytes)."""
-        # DEBUG: Verify expected data size
-        # if len(data) % HEADER_SIZE == 0:
-            # headers_in_data = len(data) // HEADER_SIZE
-        
-        # Convert header index to byte position
         byte_pos = pos  # Just rename for clarity
         needed_size = byte_pos + len(data)  # This is in BYTES, not headers
         
         filepath = self.path()
         
-        # Make sure directory exists
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
         with open(filepath, 'rb+') as f:
-            # Check current file size
             f.seek(0, 2)  # Seek to end
             current_size = f.tell()
             
@@ -909,10 +755,8 @@ class Blockchain(Logger):
             if current_size < needed_size:
                 f.truncate(needed_size)
             elif truncate and current_size > needed_size:
-                # Don't truncate to preserve data
                 pass
             
-            # Write at the correct byte position
             f.seek(byte_pos)
             bytes_written = f.write(data)
         
@@ -927,7 +771,6 @@ class Blockchain(Logger):
         
         with self.lock:
             
-            # Calculate where this header should go in our chain
             if height < self.forkpoint:
                 return
             
@@ -984,11 +827,6 @@ class Blockchain(Logger):
         header = self.header_at_tip()
         if not header:
             return True
-        # note: We check the timestamp only in the latest header.
-        #       The Bitcoin consensus has a lot of leeway here:
-        #       - needs to be greater than the median of the timestamps of the past 11 blocks, and
-        #       - up to at most 2 hours into the future compared to local clock
-        #       so there is ~2 hours of leeway in either direction
         if header['timestamp'] + STALE_DELAY < time.time():
             return True
         return False
@@ -1226,7 +1064,7 @@ class Blockchain(Logger):
                         actual_target = self.bits_to_target(last_header['bits'])
                         ratio = expected_target / actual_target if actual_target != 0 else float('inf')
                         
-                        if abs(ratio - 1) <= 0.003:  # 0.3% tolerance for chunk verification
+                        if abs(ratio - 1) <= 0.003:
                             return expected_target
         except Exception as e:
             import traceback
@@ -1251,7 +1089,6 @@ class Blockchain(Logger):
                 target = self.bits_to_target(bits)
                 return target
         try:
-            # Read the last header in the previous chunk
             last_header_height = (index + 1) * CHUNK_SIZE - 1
             
             header = self.read_header(last_header_height)
@@ -1266,7 +1103,6 @@ class Blockchain(Logger):
 
     @classmethod
     def bits_to_target(cls, bits: int) -> int:
-        # arith_uint256::SetCompact in Bitcoin Core
         if not (0 <= bits < (1 << 32)):
             raise InvalidHeader(f"bits should be uint32. got {bits!r}")
         bitsN = (bits >> 24) & 0xff
@@ -1276,7 +1112,6 @@ class Blockchain(Logger):
         else:
             target = bitsBase << (8 * (bitsN-3))
         if target != 0 and bits & 0x800000 != 0:
-            # Bit number 24 (0x800000) represents the sign of N
             raise InvalidHeader("target cannot be negative")
         if (target != 0 and
                 (bitsN > 34 or
@@ -1342,14 +1177,11 @@ class Blockchain(Logger):
         height = header['block_height']
         header_hash = hash_header(header)
         
-        
-        # 1. Check for genesis block
         if height == 0:
             if header_hash != constants.net.GENESIS:
                 return False
             return True
         
-        # 2. CRITICAL: Always check checkpoints at checkpoint heights
         if height % 2016 == 0:
             checkpoint_index = height // 2016
             
@@ -1366,15 +1198,12 @@ class Blockchain(Logger):
                         else:
                             return True
         
-        # 3. For non-checkpoint headers, check continuity with previous block
         if height > 0:
             expected_prev_hash = None
             
             if height == 1:
-                # Block 1 connects to genesis
                 expected_prev_hash = constants.net.GENESIS
             else:
-                # Get previous block's hash from our chain
                 try:
                     current_height = self.height()
                     if current_height is not None and current_height >= height - 1:
@@ -1405,7 +1234,6 @@ class Blockchain(Logger):
             return False
 
     def get_checkpoints(self):
-        # for each chunk, store the hash of the last block and the target after the chunk
         cp = []
         n = self.height() // CHUNK_SIZE
         for index in range(n):
