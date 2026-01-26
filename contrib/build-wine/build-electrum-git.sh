@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="4.6.2"
+
 NAME_ROOT=electrum-scash
 PROJECT_ROOT="$WINEPREFIX/drive_c/electrum-scash"
 
@@ -81,7 +81,7 @@ popd
 
 info "building NSIS installer"
 # $VERSION could be passed to the electrum.nsi script, but this would require some rewriting in the script itself.
-
+VERSION="4.6.2"
 makensis -DPRODUCT_VERSION=$VERSION electrum-scash.nsi
 
 cd dist
