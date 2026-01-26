@@ -6,7 +6,7 @@ build/
 dist/
 *.egg/
 Electrum.egg-info/
-Electrum-Scash.egg-info/
+electrum_scash.egg-info/
 .devlocaltmp/
 *_trial_temp
 packages

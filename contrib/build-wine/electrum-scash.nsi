@@ -16,7 +16,7 @@
 
   ;Name and file
   Name "${PRODUCT_NAME}"
-  OutFile "electrum-scash-${PRODUCT_VERSION}-setup.exe"
+  OutFile "dist\electrum-scash-${PRODUCT_VERSION}-setup.exe"
 
   ;Default installation folder
   InstallDir "$PROGRAMFILES64\${PRODUCT_NAME}"

@@ -13,7 +13,16 @@ set -e
 
 pushd "$PROJECT_ROOT"
 
-VERSION=$(git describe --tags --dirty --always)
+# Auto-detect clean version
+if git diff-index --quiet HEAD -- && \
+   git diff-files --quiet && \
+   git ls-files --others --exclude-standard | grep -q '^$'; then
+    VERSION=$(git describe --tags --always)
+else
+    VERSION=$(git describe --tags --dirty --always)
+fi
+
+
 info "Last commit: $VERSION"
 
 info "preparing electrum-locale."
