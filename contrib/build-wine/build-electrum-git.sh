@@ -1,5 +1,5 @@
 #!/bin/bash
-
+CLEAN_VERSION=$(git describe --tags --always)
 NAME_ROOT=electrum-scash
 PROJECT_ROOT="$WINEPREFIX/drive_c/electrum-scash"
 
@@ -81,6 +81,7 @@ popd
 
 info "building NSIS installer"
 # $VERSION could be passed to the electrum.nsi script, but this would require some rewriting in the script itself.
+VERSION="$CLEAN_VERSION"
 makensis -DPRODUCT_VERSION=$VERSION electrum-scash.nsi
 
 cd dist
