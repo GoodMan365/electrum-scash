@@ -909,7 +909,8 @@ class Blockchain(Logger):
                 raise InvalidHeader("Genesis block cannot use ASERT")
             
             prev_header = self.read_header(height - 1)
-            
+            if (constants.net.max_checkpoint() == height):
+                return
             if not prev_header and is_after_checkpoint:
                 expected_target = target
                 cm = compute_commitment(header)
