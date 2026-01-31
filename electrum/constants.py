@@ -292,20 +292,6 @@ class ScashMainnet(AbstractNet):
         
         return None
     
-    # @classmethod
-    # def _start_server_fetch_thread(cls, cache_file):
-        # """Start a background thread with its own asyncio loop to fetch servers."""
-        # def run_async():
-            # # Create a new event loop for this thread
-            # loop = asyncio.new_event_loop()
-            # asyncio.set_event_loop(loop)
-            # try:
-                # loop.run_until_complete(cls._fetch_servers_async(cache_file))
-            # finally:
-                # loop.close()
-
-        # cls._server_fetch_thread = threading.Thread(group=None, target=run_async, daemon=True)
-        # cls._server_fetch_thread.start()
         
     @classmethod
     def _start_server_fetch_thread(cls, cache_file):
@@ -331,17 +317,10 @@ class ScashMainnet(AbstractNet):
             timeout = aiohttp.ClientTimeout(total=10)
             headers = {'User-Agent': 'Electrum-Scash/1.0'}
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(cls.SERVERS_UPDATE_URL, headers=headers) as response:  # ✅ headers passed
+                async with session.get(cls.SERVERS_UPDATE_URL, headers=headers) as response:  
                     response.raise_for_status()
                     text = await response.text()
-                    servers = json.loads(text)  #json.loads text/plain not json
-                    #servers = await response.json()
-
-                    # if isinstance(servers, dict):
-                        # if servers and all(isinstance(v, dict) and ('t' in v or 's' in v) for v in servers.values()):
-                            # os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-                            # with open(cache_file, 'w', encoding='utf-8') as f:
-                                # json.dump(servers, f, indent=2)
+                    servers = json.loads(text) 
                                 
                     if isinstance(servers, dict):
                         # Save to cache
@@ -384,12 +363,7 @@ class ScashMainnet(AbstractNet):
         
         # Linux 
         return os.path.expanduser('~/.electrum-scash/cache')
-    # def _get_cache_directory(cls):
-        # """Get platform-specific cache directory."""
-        # if sys.platform == 'win32':
-            # return os.path.join(os.environ.get('APPDATA', ''), 'Electrum-SCASH', 'cache')
-        # else:
-            # return os.path.expanduser('~/.electrum-scash/cache')
+    
     
     @classmethod
     def _find_bundled_file(cls, filename):
